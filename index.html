@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#FF6B6B">
+    <meta name="description" content="Fruit Blast — яркая игра «Три в ряд» с бонусами, комбо и рекордами. Собирай фрукты и ставь рекорды!">
+    <title>Fruit Blast - Три в ряд</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3CradialGradient id='g' cx='30%25' cy='30%25' r='70%25'%3E%3Cstop offset='0%25' style='stop-color:%23FF6B6B'/%3E%3Cstop offset='100%25' style='stop-color:%23C0392B'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%23667eea'/%3E%3Cellipse cx='32' cy='36' rx='20' ry='18' fill='url(%23g)'/%3E%3Cellipse cx='26' cy='29' rx='5' ry='3.5' fill='rgba(255,255,255,0.4)'/%3E%3Cpath d='M32 16 Q36 10 40 14' stroke='%238B4513' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3Cellipse cx='37' cy='13' rx='4' ry='3' fill='%2327AE60'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
+</head>
+<body>
+    <!-- Loading screen -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-content">
+            <div class="loading-fruit">🍎🍊🍓🍇🍉🍋</div>
+            <div class="loading-title">Fruit Blast</div>
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Загрузка...</div>
+        </div>
+    </div>
+
+    <div class="game-container">
+        <header class="game-header">
+            <div class="score-container">
+                <div class="score-label">СЧЁТ</div>
+                <div class="score-value" id="score">0</div>
+            </div>
+            <div class="score-container">
+                <div class="score-label">ЛУЧШИЙ</div>
+                <div class="score-value" id="best-score">0</div>
+            </div>
+            <div class="score-container diamond-score">
+                <div class="score-label">АЛМАЗЫ</div>
+                <div class="score-value diamond-value" id="diamonds-count">💎 0</div>
+            </div>
+        </header>
+
+        <div class="game-board" id="game-board"></div>
+
+        <div class="controls">
+            <button class="control-btn" id="sound-btn" title="Звук">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+                    <path id="sound-waves" d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                </svg>
+            </button>
+            <button class="control-btn" id="pause-btn" title="Пауза">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="6" y="4" width="4" height="16"></rect>
+                    <rect x="14" y="4" width="4" height="16"></rect>
+                </svg>
+            </button>
+            <button class="control-btn" id="restart-btn" title="Новая игра">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M23 4v6h-6"></path>
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                </svg>
+            </button>
+            <button class="control-btn" id="leaderboard-btn" title="Таблица лидеров">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z"></path>
+                    <path d="M17 9a5 5 0 0 0 4-2M7 9a5 5 0 0 1-4-2"></path>
+                </svg>
+            </button>
+            <button class="control-btn" id="store-btn" title="Магазин">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M6 7l1.2-3h9.6L18 7M4 7h16v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Z"></path>
+                    <path d="M6 13v7h12v-7M9 13v-1M15 13v-1"></path>
+                </svg>
+            </button>
+        </div>
+
+        <div class="boost-panel" id="boost-panel">
+            <button class="boost-btn" data-booster="hammer" title="Молоток: разбить клетку">
+                <span class="boost-icon">🔨</span>
+                <span class="boost-count" id="count-hammer">0</span>
+            </button>
+            <button class="boost-btn" data-booster="rocket" title="Ракета: снести ряд и колонку">
+                <span class="boost-icon">🚀</span>
+                <span class="boost-count" id="count-rocket">0</span>
+            </button>
+            <button class="boost-btn" data-booster="swap" title="Обмен: поменять две клетки">
+                <span class="boost-icon">🔄</span>
+                <span class="boost-count" id="count-swap">0</span>
+            </button>
+        </div>
+
+        <div class="game-over-modal" id="game-over-modal">
+            <div class="modal-content">
+                <h2 class="modal-title">ИГРА ОКОНЧЕНА</h2>
+                <div class="modal-score">
+                    <div class="modal-score-label">Ваш результат</div>
+                    <div class="modal-score-value" id="final-score">0</div>
+                </div>
+                <div class="modal-best">
+                    <div class="modal-best-label">Лучший результат</div>
+                    <div class="modal-best-value" id="modal-best-score">0</div>
+                </div>
+                <button class="play-again-btn" id="play-again-btn">ИГРАТЬ СНОВА</button>
+                <button class="play-again-btn secondary" id="leaderboard-results-btn">ТАБЛИЦА ЛИДЕРОВ</button>
+            </div>
+        </div>
+
+        <div class="pause-modal" id="pause-modal">
+            <div class="modal-content">
+                <h2 class="modal-title">ПАУЗА</h2>
+                <button class="play-again-btn" id="resume-btn">ПРОДОЛЖИТЬ</button>
+            </div>
+        </div>
+
+        <div class="leaderboard-modal" id="leaderboard-modal">
+            <div class="modal-content leaderboard-content">
+                <h2 class="modal-title">ТАБЛИЦА ЛИДЕРОВ</h2>
+                <div class="leaderboard-list" id="leaderboard-list">
+                    <div class="leaderboard-loading">Загрузка...</div>
+                </div>
+                <button class="play-again-btn" id="leaderboard-close-btn">ЗАКРЫТЬ</button>
+            </div>
+        </div>
+
+        <div class="store-modal" id="store-modal">
+            <div class="modal-content store-content">
+                <h2 class="modal-title">МАГАЗИН</h2>
+                <div class="store-balance">
+                    <span class="store-balance-label">Ваш баланс:</span>
+                    <span class="store-balance-value" id="store-diamond-balance">💎 0</span>
+                </div>
+
+                <div class="store-section-title">БУСТЕРЫ</div>
+                <div class="store-boosters">
+                    <div class="booster-store-card" data-store-booster="hammer" data-name="Молоток" data-desc="Разбить любую клетку" data-price="10">
+                        <div class="boost-big-icon">🔨</div>
+                        <div class="store-card-name">Молоток</div>
+                        <div class="store-card-desc">Разбить любую клетку</div>
+                        <div class="store-card-owned">У вас: <span class="owned-count" id="owned-hammer">0</span></div>
+                        <button class="store-card-add">ДОПОЛНИТЬ</button>
+                    </div>
+                    <div class="booster-store-card" data-store-booster="rocket" data-name="Ракета" data-desc="Снести ряд и колонку" data-price="20">
+                        <div class="boost-big-icon">🚀</div>
+                        <div class="store-card-name">Ракета</div>
+                        <div class="store-card-desc">Снести ряд и колонку</div>
+                        <div class="store-card-owned">У вас: <span class="owned-count" id="owned-rocket">0</span></div>
+                        <button class="store-card-add">ДОПОЛНИТЬ</button>
+                    </div>
+                    <div class="booster-store-card" data-store-booster="swap" data-name="Обмен" data-desc="Поменять две клетки местами" data-price="15">
+                        <div class="boost-big-icon">🔄</div>
+                        <div class="store-card-name">Обмен</div>
+                        <div class="store-card-desc">Поменять две клетки местами</div>
+                        <div class="store-card-owned">У вас: <span class="owned-count" id="owned-swap">0</span></div>
+                        <button class="store-card-add">ДОПОЛНИТЬ</button>
+                    </div>
+                </div>
+
+                <div class="purchase-bar hidden" id="purchase-bar">
+                    <div class="purchase-bar-info">
+                        <span class="purchase-name" id="purchase-name">Молоток</span>
+                        <span class="purchase-owned" id="purchase-owned"></span>
+                    </div>
+                    <div class="purchase-actions">
+                        <button class="play-again-btn purchase-ad-btn" id="purchase-ad-btn">📺 РЕКЛАМА</button>
+                        <button class="play-again-btn secondary purchase-dm-btn" id="purchase-dm-btn">💎 0</button>
+                    </div>
+                    <button class="purchase-close" id="purchase-close">×</button>
+                </div>
+
+                <div class="store-section-title">АЛМАЗЫ</div>
+                <div class="store-diamonds">
+                    <div class="diamond-pack-card">
+                        <div class="diamond-pack-qty">💎 60</div>
+                        <button class="diamond-pay-btn" data-pack="diam_small">79 ₽</button>
+                    </div>
+                    <div class="diamond-pack-card">
+                        <div class="diamond-pack-qty">💎 150</div>
+                        <button class="diamond-pay-btn" data-pack="diam_small2">179 ₽</button>
+                    </div>
+                    <div class="diamond-pack-card">
+                        <div class="diamond-pack-qty">💎 300</div>
+                        <button class="diamond-pay-btn" data-pack="diam_medium">299 ₽</button>
+                    </div>
+                    <div class="diamond-pack-card">
+                        <div class="diamond-pack-qty">💎 700</div>
+                        <button class="diamond-pay-btn" data-pack="diam_big">599 ₽</button>
+                    </div>
+                    <div class="diamond-pack-card">
+                        <div class="diamond-pack-qty">💎 1200</div>
+                        <button class="diamond-pay-btn" data-pack="diam_large">899 ₽</button>
+                    </div>
+                    <div class="diamond-pack-card">
+                        <div class="diamond-pack-qty">💎 2500</div>
+                        <button class="diamond-pay-btn" data-pack="diam_mega">1499 ₽</button>
+                    </div>
+                </div>
+
+                <div class="store-hint">Помощь в магазине VK Mini Apps недоступна. Подключайте покупки через консоль разработчика VK.</div>
+                <button class="play-again-btn" id="store-close-btn">ЗАКРЫТЬ</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
