@@ -25,6 +25,35 @@ body {
     position: relative;
 }
 
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 30px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    font-size: 14px;
+    font-weight: 600;
+    color: #3c3c4a;
+    justify-content: center;
+}
+
+.user-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.user-name {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .game-header {
     display: flex;
     justify-content: space-between;
@@ -825,6 +854,19 @@ body {
     font-size: 14px;
     flex: 1;
     margin-top: 0;
+}
+
+.purchase-pack-btn {
+    padding: 10px 8px;
+    font-size: 14px;
+    flex: 1;
+    margin-top: 0;
+    background: linear-gradient(135deg, #27AE60 0%, #2ECC71 100%);
+    box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4);
+}
+
+.purchase-pack-btn:hover {
+    box-shadow: 0 6px 20px rgba(39, 174, 96, 0.6);
 }
 
 .purchase-close {

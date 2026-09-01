@@ -26,14 +26,29 @@ const BOOSTER_DEFS = {
 const BOOSTER_IDS = Object.keys(BOOSTER_DEFS);
 
 const DIAMOND_PACKS = {
-    diam_small:  { qty: 60,  price: '79 ₽',   vk_price: 79 },
-    diam_small2: { qty: 150, price: '179 ₽',  vk_price: 179 },
-    diam_medium: { qty: 300, price: '299 ₽',  vk_price: 299 },
-    diam_big:    { qty: 700, price: '599 ₽',  vk_price: 599 },
-    diam_large:  { qty: 1200, price: '899 ₽', vk_price: 899 },
-    diam_mega:   { qty: 2500, price: '1499 ₽', vk_price: 1499 }
+    diam_small:  { qty: 60,  votes: 11,  price: '11 голосов' },
+    diam_small2: { qty: 150, votes: 26,  price: '26 голосов' },
+    diam_medium: { qty: 300, votes: 43,  price: '43 голоса' },
+    diam_big:    { qty: 700, votes: 86,  price: '86 голосов' },
+    diam_large:  { qty: 1200, votes: 128, price: '128 голосов' },
+    diam_mega:   { qty: 2500, votes: 214, price: '214 голосов' }
 };
 const DIAMONDS_PER_SCORE = 250;
+
+// Paid booster packs (VK order items priced in votes, 1 vote = 7 rubles)
+const BOOSTER_PACKS = {
+    hammer: { id: 'hammer_pack', qty: 3,  votes: 7 },
+    rocket: { id: 'rocket_pack', qty: 3,  votes: 11 },
+    swap:   { id: 'swap_pack',   qty: 3,  votes: 10 }
+};
+
+function votesLabel(n) {
+    const n10 = n % 10;
+    const n100 = n % 100;
+    if (n10 === 1 && n100 !== 11) return n + ' голос';
+    if (n10 >= 2 && n10 <= 4 && (n100 < 12 || n100 > 14)) return n + ' голоса';
+    return n + ' голосов';
+}
 
 // ===== VK BRIDGE LAYER =====
 function initVkBridge() {
@@ -73,6 +88,19 @@ function vkStorageGet(key) {
 function vkStorageSet(key, value) {
     if (!vkAvailable()) return Promise.resolve();
     return vkBridge.send('VKWebAppStorageSet', { key: key, value: String(value) }).catch(() => {});
+}
+
+function fetchUserInfo() {
+    if (!vkAvailable()) return;
+    vkBridge.send('VKWebAppGetUserInfo', {}).then(res => {
+        if (res && res.first_name) {
+            userName.textContent = res.first_name + (res.last_name ? ' ' + res.last_name : '');
+            if (res.photo_100) {
+                userAvatar.src = res.photo_100;
+                userAvatar.hidden = false;
+            }
+        }
+    }).catch(() => {});
 }
 
 // Leaderboard is NOT natively supported for game scores in VK Mini Apps via Bridge
@@ -182,9 +210,11 @@ const pauseModal = document.getElementById('pause-modal');
 const leaderboardModal = document.getElementById('leaderboard-modal');
 const playAgainBtn = document.getElementById('play-again-btn');
 const resumeBtn = document.getElementById('resume-btn');
-const pauseBtn = document.getElementById('pause-btn');
 const restartBtn = document.getElementById('restart-btn');
 const soundBtn = document.getElementById('sound-btn');
+const userInfo = document.getElementById('user-info');
+const userAvatar = document.getElementById('user-avatar');
+const userName = document.getElementById('user-name');
 const leaderboardBtn = document.getElementById('leaderboard-btn');
 const leaderboardList = document.getElementById('leaderboard-list');
 const leaderboardCloseBtn = document.getElementById('leaderboard-close-btn');
@@ -202,6 +232,7 @@ const purchaseName = document.getElementById('purchase-name');
 const purchaseOwned = document.getElementById('purchase-owned');
 const purchaseAdBtn = document.getElementById('purchase-ad-btn');
 const purchaseDmBtn = document.getElementById('purchase-dm-btn');
+const purchasePackBtn = document.getElementById('purchase-pack-btn');
 const purchaseClose = document.getElementById('purchase-close');
 const diamondPayBtns = document.querySelectorAll('.diamond-pay-btn');
 const boostPanel = document.getElementById('boost-panel');
@@ -282,6 +313,12 @@ function persistUserData() {
         localStorage.setItem(VK_KEYS.data, JSON.stringify(data));
     } catch (e) {}
     vkStorageSet(VK_KEYS.data, JSON.stringify(data));
+}
+
+function flushAllSaves() {
+    persistBestScore();
+    persistSoundSetting();
+    persistUserData();
 }
 
 function addDiamonds(n) {
@@ -1160,9 +1197,16 @@ function selectBoosterInStore(id) {
 function showPurchaseBarFor(id) {
     const def = BOOSTER_DEFS[id];
     if (!def) return;
+    const pack = BOOSTER_PACKS[id];
     purchaseName.textContent = def.icon + ' ' + def.name;
     purchaseOwned.textContent = 'У вас: ' + (boosters[id] || 0);
     purchaseDmBtn.textContent = '💎 ' + def.price;
+    if (pack) {
+        purchasePackBtn.textContent = '📦 ПАК ' + pack.qty + ' шт · ' + votesLabel(pack.votes);
+        purchasePackBtn.classList.remove('hidden');
+    } else {
+        purchasePackBtn.classList.add('hidden');
+    }
     purchaseBar.classList.remove('hidden');
     storeSelectedBooster = id;
     updateBoostPanel();
@@ -1207,6 +1251,33 @@ function purchaseBoosterByDiamonds(id) {
     showMessage('+1 ' + def.icon + ' ' + def.name);
 }
 
+// Buy a booster pack for real money via VK order box
+async function buyBoosterPack(id) {
+    const bId = id || storeSelectedBooster;
+    const pack = BOOSTER_PACKS[bId];
+    if (!pack) return;
+    if (!vkAvailable()) {
+        showMessage('Покупки доступны только в VK Mini Apps');
+        return;
+    }
+    try {
+        const itemsRes = await vkBridge.send('VKWebAppGetOrderItems', {});
+        const items = itemsRes.items || [];
+        if (!items.includes(pack.id)) {
+            showMessage('Товар не найден. Создайте его в консоли VK');
+            return;
+        }
+        await vkBridge.send('VKWebAppShowOrderBox', { type: 'item', item: pack.id });
+        // NOTE: for production verify order on your server via VKWebAppCheckOrder
+        boosters[bId] += pack.qty;
+        persistUserData();
+        updateBoostPanel();
+        showMessage('Оплата голосами прошла! +' + pack.qty + ' ' + BOOSTER_DEFS[bId].icon + ' ' + BOOSTER_DEFS[bId].name);
+    } catch (e) {
+        showMessage('Покупка отменена или не удалась');
+    }
+}
+
 // VK payments flow:
 // 1. VKWebAppGetOrderItems - fetch available order items (must be configured in VK console)
 // 2. VKWebAppShowOrderBox - show native payment popup
@@ -1228,7 +1299,7 @@ async function buyDiamondPack(packId) {
             return;
         }
         await vkBridge.send('VKWebAppShowOrderBox', { type: 'item', item: packId });
-        showMessage('Оплата прошла. Алмазы будут зачислены');
+        showMessage('Оплата голосами прошла! +' + pack.qty + ' 💎');
     } catch (e) {
         showMessage('Покупка отменена или не удалась');
     }
@@ -1244,7 +1315,6 @@ playAgainBtn.addEventListener('click', () => {
 });
 
 resumeBtn.addEventListener('click', togglePause);
-pauseBtn.addEventListener('click', togglePause);
 restartBtn.addEventListener('click', () => {
     if (vkAvailable()) {
         showFullscreenAd().then(() => initGame());
@@ -1268,6 +1338,7 @@ storeBoosterCards.forEach(card => {
 });
 purchaseAdBtn.addEventListener('click', () => purchaseBoosterByAd());
 purchaseDmBtn.addEventListener('click', () => purchaseBoosterByDiamonds());
+purchasePackBtn.addEventListener('click', () => buyBoosterPack());
 purchaseClose.addEventListener('click', () => {
     storeSelectedBooster = null;
     hidePurchaseBar();
@@ -1282,16 +1353,24 @@ gameBoard.addEventListener('touchstart', handleTouchStart, { passive: true });
 gameBoard.addEventListener('touchend', handleTouchEnd, { passive: true });
 
 document.addEventListener('visibilitychange', () => {
-    if (document.hidden && !gameOverShown && !isPaused && gameStarted) {
-        isPaused = true;
-        pauseModal.classList.add('active');
+    if (document.hidden) {
+        flushAllSaves();
+        if (!gameOverShown && !isPaused && gameStarted) {
+            isPaused = true;
+            pauseModal.classList.add('active');
+        }
     }
 });
+
+window.addEventListener('pagehide', flushAllSaves);
 
 // ===== BOOT =====
 async function boot() {
     // Init VK Bridge (required before any VK API calls)
     await initVkBridge();
+
+    // Show the logged-in VK user
+    fetchUserInfo();
 
     soundEnabled = await getSoundSetting(false);
     soundBtn.style.opacity = soundEnabled ? '1' : '0.5';

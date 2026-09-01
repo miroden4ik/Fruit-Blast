@@ -22,6 +22,11 @@
     </div>
 
     <div class="game-container">
+        <div class="user-info" id="user-info">
+            <img class="user-avatar" id="user-avatar" alt="" hidden>
+            <span class="user-name" id="user-name">Игрок</span>
+        </div>
+
         <header class="game-header">
             <div class="score-container">
                 <div class="score-label">СЧЁТ</div>
@@ -44,12 +49,6 @@
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
                     <path id="sound-waves" d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-                </svg>
-            </button>
-            <button class="control-btn" id="pause-btn" title="Пауза">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="6" y="4" width="4" height="16"></rect>
-                    <rect x="14" y="4" width="4" height="16"></rect>
                 </svg>
             </button>
             <button class="control-btn" id="restart-btn" title="Новая игра">
@@ -161,6 +160,7 @@
                     <div class="purchase-actions">
                         <button class="play-again-btn purchase-ad-btn" id="purchase-ad-btn">📺 РЕКЛАМА</button>
                         <button class="play-again-btn secondary purchase-dm-btn" id="purchase-dm-btn">💎 0</button>
+                        <button class="play-again-btn purchase-pack-btn" id="purchase-pack-btn">📦 ПАК</button>
                     </div>
                     <button class="purchase-close" id="purchase-close">×</button>
                 </div>
@@ -169,31 +169,31 @@
                 <div class="store-diamonds">
                     <div class="diamond-pack-card">
                         <div class="diamond-pack-qty">💎 60</div>
-                        <button class="diamond-pay-btn" data-pack="diam_small">79 ₽</button>
+                        <button class="diamond-pay-btn" data-pack="diam_small">11 голосов</button>
                     </div>
                     <div class="diamond-pack-card">
                         <div class="diamond-pack-qty">💎 150</div>
-                        <button class="diamond-pay-btn" data-pack="diam_small2">179 ₽</button>
+                        <button class="diamond-pay-btn" data-pack="diam_small2">26 голосов</button>
                     </div>
                     <div class="diamond-pack-card">
                         <div class="diamond-pack-qty">💎 300</div>
-                        <button class="diamond-pay-btn" data-pack="diam_medium">299 ₽</button>
+                        <button class="diamond-pay-btn" data-pack="diam_medium">43 голоса</button>
                     </div>
                     <div class="diamond-pack-card">
                         <div class="diamond-pack-qty">💎 700</div>
-                        <button class="diamond-pay-btn" data-pack="diam_big">599 ₽</button>
+                        <button class="diamond-pay-btn" data-pack="diam_big">86 голосов</button>
                     </div>
                     <div class="diamond-pack-card">
                         <div class="diamond-pack-qty">💎 1200</div>
-                        <button class="diamond-pay-btn" data-pack="diam_large">899 ₽</button>
+                        <button class="diamond-pay-btn" data-pack="diam_large">128 голосов</button>
                     </div>
                     <div class="diamond-pack-card">
                         <div class="diamond-pack-qty">💎 2500</div>
-                        <button class="diamond-pay-btn" data-pack="diam_mega">1499 ₽</button>
+                        <button class="diamond-pay-btn" data-pack="diam_mega">214 голосов</button>
                     </div>
                 </div>
 
-                <div class="store-hint">Помощь в магазине VK Mini Apps недоступна. Подключайте покупки через консоль разработчика VK.</div>
+                <div class="store-hint">Оплата производится голосами VK. Создайте товары с этими ценами в консоли разработчика VK.</div>
                 <button class="play-again-btn" id="store-close-btn">ЗАКРЫТЬ</button>
             </div>
         </div>
