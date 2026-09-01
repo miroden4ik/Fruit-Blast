@@ -201,16 +201,26 @@ let swapBoostPick = null;
 let storeSelectedBooster = null;
 let diamondsAwardedForScore = 0;
 
+// ===== TIMER STATE =====
+const GAME_DURATION = 20 * 60; // 20 минут в секундах
+let timeLeft = GAME_DURATION;
+let gameTimerInterval = null;
+let lastTimerTick = 0;
+let savedGame = null; // автосохранённое состояние (время, счёт, доска)
+
 // ===== DOM =====
 const gameBoard = document.getElementById('game-board');
 const scoreDisplay = document.getElementById('score');
 const bestScoreDisplay = document.getElementById('best-score');
 const gameOverModal = document.getElementById('game-over-modal');
+const finalScore = document.getElementById('final-score');
+const modalBestScore = document.getElementById('modal-best-score');
 const pauseModal = document.getElementById('pause-modal');
 const leaderboardModal = document.getElementById('leaderboard-modal');
 const playAgainBtn = document.getElementById('play-again-btn');
 const resumeBtn = document.getElementById('resume-btn');
 const restartBtn = document.getElementById('restart-btn');
+const pauseBtn = document.getElementById('pause-btn');
 const soundBtn = document.getElementById('sound-btn');
 const userInfo = document.getElementById('user-info');
 const userAvatar = document.getElementById('user-avatar');
@@ -246,6 +256,14 @@ const ownedEls = {
     rocket: document.getElementById('owned-rocket'),
     swap: document.getElementById('owned-swap')
 };
+const timerDisplay = document.getElementById('timer');
+const pauseTimeDisplay = document.getElementById('pause-time');
+const resumeModal = document.getElementById('resume-modal');
+const resumeTimeDisplay = document.getElementById('resume-time');
+const resumeScoreDisplay = document.getElementById('resume-score');
+const resumeContinueBtn = document.getElementById('resume-continue-btn');
+const resumeNewBtn = document.getElementById('resume-new-btn');
+const pauseRestartBtn = document.getElementById('pause-restart-btn');
 
 // ===== VK STORAGE / PLAYER =====
 function getSoundSetting(defaultVal) {
@@ -291,23 +309,19 @@ function persistSoundSetting() {
 
 function loadUserData() {
     return new Promise(resolve => {
-        let localData = null;
         try {
             const raw = localStorage.getItem(VK_KEYS.data);
-            localData = raw ? JSON.parse(raw) : null;
-        } catch (e) {}
-        if (!vkAvailable()) {
-            resolve(localData);
-            return;
+            const localData = raw ? JSON.parse(raw) : null;
+            vkStorageGet(VK_KEYS.data).then(val => {
+                let vkData = null;
+                if (val) {
+                    try { vkData = JSON.parse(val); } catch (e) {}
+                }
+                resolve(vkData && localData ? { boosters: { ...vkData.boosters, ...localData.boosters }, diamonds: Math.max(vkData.diamonds || 0, localData.diamonds || 0) } : (vkData || localData));
+            }).catch(() => resolve(localData));
+        } catch (e) {
+            resolve(null);
         }
-        vkStorageGet(VK_KEYS.data).then(val => {
-            let vkData = null;
-            if (val) {
-                try { vkData = JSON.parse(val); } catch (e) {}
-            }
-            // VK storage is the cross-device source of truth, localStorage is a fallback
-            resolve(vkData || localData);
-        }).catch(() => resolve(localData));
     });
 }
 
@@ -356,6 +370,128 @@ function rewardDiamondsForScore() {
     }
 }
 
+// ===== TIMER =====
+function formatTime(totalSeconds) {
+    totalSeconds = Math.max(0, Math.floor(totalSeconds));
+    const m = Math.floor(totalSeconds / 60);
+    const s = totalSeconds % 60;
+    return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+}
+
+function updateTimerDisplay() {
+    timerDisplay.textContent = formatTime(timeLeft);
+    timerDisplay.classList.toggle('low', timeLeft <= 60);
+}
+
+function startGameTimer() {
+    stopGameTimer();
+    lastTimerTick = Date.now();
+    gameTimerInterval = setInterval(() => {
+        const now = Date.now();
+        const elapsed = (now - lastTimerTick) / 1000;
+        lastTimerTick = now;
+        if (isPaused || gameOverShown) return;
+        timeLeft -= elapsed;
+        if (timeLeft <= 0) {
+            timeLeft = 0;
+            updateTimerDisplay();
+            endGameByTime();
+        } else {
+            updateTimerDisplay();
+        }
+    }, 1000);
+}
+
+function stopGameTimer() {
+    if (gameTimerInterval) {
+        clearInterval(gameTimerInterval);
+        gameTimerInterval = null;
+    }
+}
+
+function endGameByTime() {
+    stopGameTimer();
+    gameOverShown = true;
+    isPaused = false;
+    clearSavedGame();
+    finalScore.textContent = score;
+    modalBestScore.textContent = bestScore;
+    gameOverModal.classList.add('active');
+    pauseModal.classList.remove('active');
+}
+
+// ===== AUTOSAVE (полное состояние игры) =====
+const SAVE_KEY = 'fruitBlastActiveGame';
+
+function saveGameState() {
+    if (!gameStarted || gameOverShown) return;
+    const state = {
+        timeLeft: timeLeft,
+        score: score,
+        diamondsAwardedForScore: diamondsAwardedForScore,
+        board: board,
+        timestamp: Date.now()
+    };
+    try {
+        localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+        savedGame = state;
+    } catch (e) {}
+}
+
+function clearSavedGame() {
+    savedGame = null;
+    try {
+        localStorage.removeItem(SAVE_KEY);
+    } catch (e) {}
+}
+
+function loadSavedGame() {
+    try {
+        const raw = localStorage.getItem(SAVE_KEY);
+        return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+function restoreSavedGame(state) {
+    score = state.score || 0;
+    timeLeft = Math.max(0, state.timeLeft || 0);
+    diamondsAwardedForScore = state.diamondsAwardedForScore || 0;
+    if (Array.isArray(state.board) && state.board.length === BOARD_SIZE) {
+        board = state.board;
+    } else {
+        createBoard();
+        while (findMatches().length > 0) createBoard();
+    }
+    selectedCell = null;
+    isProcessing = false;
+    comboCount = 0;
+    gameOverShown = false;
+    isPaused = false;
+    activeBooster = null;
+    swapBoostPick = null;
+    updateScoreDisplay();
+    updateBoostPanel();
+    updateTimerDisplay();
+    renderBoard();
+    gameOverModal.classList.remove('active');
+    resumeModal.classList.remove('active');
+    pauseModal.classList.remove('active');
+    leaderboardModal.classList.remove('active');
+    startGameTimer();
+}
+
+function showResumeModal() {
+    if (gameOverShown) return;
+    stopGameTimer();
+    isPaused = false;
+    resumeTimeDisplay.textContent = 'Осталось ' + formatTime(timeLeft);
+    resumeScoreDisplay.textContent = score;
+    resumeModal.classList.add('active');
+    pauseModal.classList.remove('active');
+}
+
 // VK leaderboards require server-side integration (VK Services) or setting up
 // through the developer console. We expose a hook that can be wired to your backend.
 function submitLeaderboard() {
@@ -393,10 +529,12 @@ function initGame() {
     activeBooster = null;
     swapBoostPick = null;
     diamondsAwardedForScore = 0;
+    timeLeft = GAME_DURATION;
+    clearSavedGame();
 
     updateScoreDisplay();
     updateBoostPanel();
-    updateDiamondUI();
+    updateTimerDisplay();
     createBoard();
 
     while (findMatches().length > 0) {
@@ -405,8 +543,10 @@ function initGame() {
 
     renderBoard();
     gameOverModal.classList.remove('active');
+    resumeModal.classList.remove('active');
     leaderboardModal.classList.remove('active');
     pauseModal.classList.remove('active');
+    startGameTimer();
 }
 
 function createBoard() {
@@ -609,21 +749,47 @@ async function swapFruits(cell1, cell2) {
     const rainbowPos = [cell1, cell2].find(p => board[p.row][p.col] && board[p.row][p.col].bonus === 'rainbow');
     if (rainbowPos) {
         const other = rainbowPos === cell1 ? cell2 : cell1;
-        const partnerType = board[other.row][other.col] && board[other.row][other.col].type;
-        if (partnerType && partnerType !== 'rainbow') {
+        const partner = board[other.row][other.col];
+        const partnerType = partner && partner.type;
+
+        if (partnerType && partnerType === 'rainbow') {
+            // Радуга + радуга: очищаем всё поле
+            rainbowActivated = true;
+            playSoundRainbow();
+            score += 100;
+            updateScoreDisplay();
+            for (let r = 0; r < BOARD_SIZE; r++) {
+                for (let c = 0; c < BOARD_SIZE; c++) {
+                    board[r][c] = null;
+                }
+            }
+            showMessage('МЕГА-РАДУГА! 🌈');
+            await dropFruits();
+            await fillEmptySpaces();
+            renderBoard();
+        } else if (partnerType && partnerType !== 'rainbow') {
             rainbowActivated = true;
             playSoundRainbow();
             score += 50;
             updateScoreDisplay();
+            // Радуга + бомба: взрыв всего поля
+            const partnerIsBomb = partner && partner.bonus === 'bomb';
             for (let r = 0; r < BOARD_SIZE; r++) {
                 for (let c = 0; c < BOARD_SIZE; c++) {
-                    if (board[r][c] && board[r][c].type === partnerType && board[r][c].bonus !== 'rainbow') {
+                    if (partnerIsBomb) {
+                        board[r][c] = null;
+                    } else if (board[r][c] && board[r][c].type === partnerType && board[r][c].bonus !== 'rainbow') {
                         board[r][c] = null;
                     }
                 }
             }
             board[rainbowPos.row][rainbowPos.col] = null;
-            showMessage('Радуга! 🌈');
+            if (partnerIsBomb) {
+                showMessage('Радуга + Бомба! 💥');
+                playSoundBomb();
+            } else {
+                showMessage('Радуга! 🌈');
+            }
             await dropFruits();
             await fillEmptySpaces();
             renderBoard();
@@ -1022,9 +1188,14 @@ function togglePause() {
     if (gameOverShown) return;
     isPaused = !isPaused;
     if (isPaused) {
+        stopGameTimer();
+        pauseTimeDisplay.textContent = formatTime(timeLeft);
+        saveGameState();
         pauseModal.classList.add('active');
     } else {
         pauseModal.classList.remove('active');
+        updateTimerDisplay();
+        startGameTimer();
     }
 }
 
@@ -1257,57 +1428,84 @@ function purchaseBoosterByDiamonds(id) {
 }
 
 // Buy a booster pack for real money via VK order box
-async function buyBoosterPack(id) {
+// Монетизация пока недоступна — покупки только "Скоро" (визуал).
+// Когда настроишь товары в консоли VK и станешь плательщиком, раскомментируй
+// флоу ниже (VKWebAppGetOrderItems -> ShowOrderBox -> CheckOrder) и включи
+// начисление товара через addDiamonds / boosters.
+function buyBoosterPack(id) {
     const bId = id || storeSelectedBooster;
     const pack = BOOSTER_PACKS[bId];
     if (!pack) return;
-    if (!vkAvailable()) {
-        showMessage('Покупки доступны только в VK Mini Apps');
-        return;
-    }
-    try {
-        const itemsRes = await vkBridge.send('VKWebAppGetOrderItems', {});
-        const items = itemsRes.items || [];
-        if (!items.includes(pack.id)) {
-            showMessage('Товар не найден. Создайте его в консоли VK');
+    showMessage('🚧 Покупка пакетов скоро');
+    return;
+
+    /*
+    // === РЕАЛЬНЫЙ ПЛАТЁЖНЫЙ ФЛОУ (включить при монетизации) ===
+    async function buyBoosterPackReal(id) {
+        const bId = id || storeSelectedBooster;
+        const pack = BOOSTER_PACKS[bId];
+        if (!pack) return;
+        if (!vkAvailable()) {
+            showMessage('Покупки доступны только в VK Mini Apps');
             return;
         }
-        await vkBridge.send('VKWebAppShowOrderBox', { type: 'item', item: pack.id });
-        // NOTE: for production verify order on your server via VKWebAppCheckOrder
-        boosters[bId] += pack.qty;
-        persistUserData();
-        updateBoostPanel();
-        showMessage('Оплата голосами прошла! +' + pack.qty + ' ' + BOOSTER_DEFS[bId].icon + ' ' + BOOSTER_DEFS[bId].name);
-    } catch (e) {
-        showMessage('Покупка отменена или не удалась');
+        try {
+            const itemsRes = await vkBridge.send('VKWebAppGetOrderItems', {});
+            const items = itemsRes.items || [];
+            if (!items.includes(pack.id)) {
+                showMessage('Товар не найден. Создайте его в консоли VK');
+                return;
+            }
+            const orderRes = await vkBridge.send('VKWebAppShowOrderBox', { type: 'item', item: pack.id });
+            if (!orderRes || !orderRes.success) return;
+            const check = await vkBridge.send('VKWebAppCheckOrder', { type: 'item', item: pack.id, user_id: '' });
+            if (check && check.success) {
+                boosters[bId] += pack.qty;
+                persistUserData();
+                updateBoostPanel();
+                showMessage('Оплата голосами прошла! +' + pack.qty + ' ' + BOOSTER_DEFS[bId].icon + ' ' + BOOSTER_DEFS[bId].name);
+            }
+        } catch (e) {
+            showMessage('Покупка отменена или не удалась');
+        }
     }
+    */
 }
 
-// VK payments flow:
-// 1. VKWebAppGetOrderItems - fetch available order items (must be configured in VK console)
-// 2. VKWebAppShowOrderBox - show native payment popup
-// 3. VKWebAppCheckOrder - verify the order on your server
+// Монетизация пока недоступна — покупки алмазов только "Скоро" (визуал).
+// Когда настроишь товары и станешь плательщиком, используй реальный флоу ниже.
 async function buyDiamondPack(packId) {
     const pack = DIAMOND_PACKS[packId];
     if (!pack) return;
+    showMessage('🚧 Покупка алмазов скоро');
+    return;
+
+    /* === РЕАЛЬНЫЙ ПЛАТЁЖНЫЙ ФЛОУ (включить при монетизации) ===
     if (!vkAvailable()) {
         showMessage('Покупки доступны только в VK Mini Apps');
         return;
     }
     try {
-        // Get the list of order items configured in the VK developer console
+        // 1. VKWebAppGetOrderItems - товары, настроенные в консоли VK
         const itemsRes = await vkBridge.send('VKWebAppGetOrderItems', {});
         const items = itemsRes.items || [];
-        const item = items.find(i => i === packId);
-        if (!item) {
+        if (!items.includes(packId)) {
             showMessage('Товар не найден. Настройте его в консоли VK');
             return;
         }
-        await vkBridge.send('VKWebAppShowOrderBox', { type: 'item', item: packId });
-        showMessage('Оплата голосами прошла! +' + pack.qty + ' 💎');
+        // 2. VKWebAppShowOrderBox - нативное окно оплаты
+        const orderRes = await vkBridge.send('VKWebAppShowOrderBox', { type: 'item', item: packId });
+        if (!orderRes || !orderRes.success) return;
+        // 3. VKWebAppCheckOrder - подтверждение заказа
+        const check = await vkBridge.send('VKWebAppCheckOrder', { type: 'item', item: packId, user_id: '' });
+        if (check && check.success) {
+            addDiamonds(pack.qty);
+            showMessage('Оплата голосами прошла! +' + pack.qty + ' 💎');
+        }
     } catch (e) {
         showMessage('Покупка отменена или не удалась');
     }
+    */
 }
 
 // ===== EVENT LISTENERS =====
@@ -1320,6 +1518,24 @@ playAgainBtn.addEventListener('click', () => {
 });
 
 resumeBtn.addEventListener('click', togglePause);
+pauseBtn.addEventListener('click', () => togglePause());
+pauseRestartBtn.addEventListener('click', () => {
+    stopGameTimer();
+    clearSavedGame();
+    initGame();
+});
+resumeContinueBtn.addEventListener('click', () => {
+    if (savedGame) {
+        restoreSavedGame(savedGame);
+    } else {
+        resumeModal.classList.remove('active');
+        startGameTimer();
+    }
+});
+resumeNewBtn.addEventListener('click', () => {
+    clearSavedGame();
+    initGame();
+});
 restartBtn.addEventListener('click', () => {
     if (vkAvailable()) {
         showFullscreenAd().then(() => initGame());
@@ -1359,15 +1575,29 @@ gameBoard.addEventListener('touchend', handleTouchEnd, { passive: true });
 
 document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
+        if (gameStarted && !gameOverShown) {
+            stopGameTimer();
+            saveGameState();
+        }
         flushAllSaves();
+    } else {
+        // Вернулись в приложение — если есть незавершённая игра, предложить продолжить
         if (!gameOverShown && !isPaused && gameStarted) {
-            isPaused = true;
-            pauseModal.classList.add('active');
+            resumeModal.classList.remove('active');
+        }
+        if (savedGame && !gameOverShown && !isPaused && gameStarted) {
+            showResumeModal();
         }
     }
 });
 
-window.addEventListener('pagehide', flushAllSaves);
+window.addEventListener('pagehide', () => {
+    if (gameStarted && !gameOverShown) {
+        stopGameTimer();
+        saveGameState();
+    }
+    flushAllSaves();
+});
 
 // ===== BOOT =====
 async function boot() {
@@ -1396,11 +1626,26 @@ async function boot() {
         boosters = { hammer: 1, rocket: 1, swap: 1 };
         diamonds = 0;
         persistUserData();
-        updateDiamondUI();
     }
 
-    initGame();
+    // Обновляем отображение баланса сразу после загрузки,
+    // иначе в шапке/магазине висит "💎 0" до первого открытия магазина.
+    updateDiamondUI();
+    updateBoostPanel();
+
+    // Есть ли незавершённая игра (таймер остановлен, сохранено состояние)?
+    const pending = loadSavedGame();
     gameStarted = true;
+
+    if (pending && pending.timeLeft > 0 && !pending.gameOver) {
+        savedGame = pending;
+        restoreSavedGame(pending);
+        stopGameTimer();
+        showResumeModal();
+    } else {
+        if (pending) clearSavedGame();
+        initGame();
+    }
 
     if (!userData) {
         showMessage('🎁 Подарок: по 1 бустеру! Загляните в магазин');

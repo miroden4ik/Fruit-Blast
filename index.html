@@ -28,6 +28,10 @@
         </div>
 
         <header class="game-header">
+            <div class="score-container score-timer">
+                <div class="score-label">ВРЕМЯ</div>
+                <div class="score-value" id="timer">20:00</div>
+            </div>
             <div class="score-container">
                 <div class="score-label">СЧЁТ</div>
                 <div class="score-value" id="score">0</div>
@@ -49,6 +53,12 @@
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
                     <path id="sound-waves" d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                </svg>
+            </button>
+            <button class="control-btn" id="pause-btn" title="Пауза">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="6" y="4" width="4" height="16" rx="1"></rect>
+                    <rect x="14" y="4" width="4" height="16" rx="1"></rect>
                 </svg>
             </button>
             <button class="control-btn" id="restart-btn" title="Новая игра">
@@ -88,7 +98,7 @@
 
         <div class="game-over-modal" id="game-over-modal">
             <div class="modal-content">
-                <h2 class="modal-title">ИГРА ОКОНЧЕНА</h2>
+                <h2 class="modal-title">ВРЕМЯ ВЫШЛО!</h2>
                 <div class="modal-score">
                     <div class="modal-score-label">Ваш результат</div>
                     <div class="modal-score-value" id="final-score">0</div>
@@ -105,7 +115,28 @@
         <div class="pause-modal" id="pause-modal">
             <div class="modal-content">
                 <h2 class="modal-title">ПАУЗА</h2>
+                <div class="modal-score">
+                    <div class="modal-score-label">Осталось времени</div>
+                    <div class="modal-score-value" id="pause-time">20:00</div>
+                </div>
                 <button class="play-again-btn" id="resume-btn">ПРОДОЛЖИТЬ</button>
+                <button class="play-again-btn secondary" id="pause-restart-btn">НОВАЯ ИГРА</button>
+            </div>
+        </div>
+
+        <div class="resume-modal" id="resume-modal">
+            <div class="modal-content">
+                <h2 class="modal-title">ДОБРО ПОЖАЛОВАТЬ!</h2>
+                <div class="modal-score">
+                    <div class="modal-score-label">У вас есть незавершённая игра</div>
+                    <div class="modal-score-value" id="resume-time">Осталось 20:00</div>
+                </div>
+                <div class="modal-score">
+                    <div class="modal-score-label">Текущий счёт</div>
+                    <div class="modal-score-value" id="resume-score">0</div>
+                </div>
+                <button class="play-again-btn" id="resume-continue-btn">ПРОДОЛЖИТЬ</button>
+                <button class="play-again-btn secondary" id="resume-new-btn">НОВАЯ ИГРА</button>
             </div>
         </div>
 
