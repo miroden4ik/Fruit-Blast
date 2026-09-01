@@ -291,19 +291,23 @@ function persistSoundSetting() {
 
 function loadUserData() {
     return new Promise(resolve => {
+        let localData = null;
         try {
             const raw = localStorage.getItem(VK_KEYS.data);
-            const localData = raw ? JSON.parse(raw) : null;
-            vkStorageGet(VK_KEYS.data).then(val => {
-                let vkData = null;
-                if (val) {
-                    try { vkData = JSON.parse(val); } catch (e) {}
-                }
-                resolve(vkData && localData ? { boosters: { ...vkData.boosters, ...localData.boosters }, diamonds: Math.max(vkData.diamonds || 0, localData.diamonds || 0) } : (vkData || localData));
-            }).catch(() => resolve(localData));
-        } catch (e) {
-            resolve(null);
+            localData = raw ? JSON.parse(raw) : null;
+        } catch (e) {}
+        if (!vkAvailable()) {
+            resolve(localData);
+            return;
         }
+        vkStorageGet(VK_KEYS.data).then(val => {
+            let vkData = null;
+            if (val) {
+                try { vkData = JSON.parse(val); } catch (e) {}
+            }
+            // VK storage is the cross-device source of truth, localStorage is a fallback
+            resolve(vkData || localData);
+        }).catch(() => resolve(localData));
     });
 }
 
@@ -392,6 +396,7 @@ function initGame() {
 
     updateScoreDisplay();
     updateBoostPanel();
+    updateDiamondUI();
     createBoard();
 
     while (findMatches().length > 0) {
@@ -1391,6 +1396,7 @@ async function boot() {
         boosters = { hammer: 1, rocket: 1, swap: 1 };
         diamonds = 0;
         persistUserData();
+        updateDiamondUI();
     }
 
     initGame();
