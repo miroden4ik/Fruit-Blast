@@ -207,6 +207,7 @@ let timeLeft = GAME_DURATION;
 let gameTimerInterval = null;
 let lastTimerTick = 0;
 let savedGame = null; // автосохранённое состояние (время, счёт, доска)
+let helpResumesOnClose = false;
 
 // ===== DOM =====
 const gameBoard = document.getElementById('game-board');
@@ -264,6 +265,9 @@ const resumeScoreDisplay = document.getElementById('resume-score');
 const resumeContinueBtn = document.getElementById('resume-continue-btn');
 const resumeNewBtn = document.getElementById('resume-new-btn');
 const pauseRestartBtn = document.getElementById('pause-restart-btn');
+const helpBtn = document.getElementById('help-btn');
+const helpModal = document.getElementById('help-modal');
+const helpCloseBtn = document.getElementById('help-close-btn');
 
 // ===== VK STORAGE / PLAYER =====
 function getSoundSetting(defaultVal) {
@@ -593,7 +597,10 @@ function renderBoard() {
                 fruitDiv.className = 'fruit';
                 const id = 'g' + (gradientCounter++);
                 if (fruitData.bonus === 'bomb') {
-                    fruitDiv.innerHTML = bonusSvgHtml('bomb', id);
+                    // Бомба показывает свой тип фрукта + значок бомбы,
+                    // чтобы было видно, с какими фруктами её совмещать.
+                    fruitDiv.innerHTML = fruitSvgHtml(fruitData.type, id)
+                        + '<span class="bomb-badge">💣</span>';
                     cell.classList.add('bomb');
                 } else if (fruitData.bonus === 'rainbow') {
                     fruitDiv.innerHTML = bonusSvgHtml('rainbow', id);
@@ -934,6 +941,9 @@ async function processMatches() {
 
         if (createdBonuses.length > 0) {
             playSoundMatch();
+            if (createdBonuses.some(b => b.bonus === 'bomb')) {
+                showMessage('💣 Бомба! Совмести 3 фрукта того же вида, чтобы взорвать');
+            }
         }
 
         if (comboMultiplier > 1) {
@@ -1508,6 +1518,36 @@ async function buyDiamondPack(packId) {
     */
 }
 
+// ===== HELP =====
+function buildHelpExamples() {
+    const g = () => 'help' + (gradientCounter++);
+
+    // Пример: 3 яблока в ряд (совпадение) и соседний фрукт для свапа
+    const matchEl = document.getElementById('help-example-match');
+    let matchHtml = '<div class="h-cell hit">' + fruitSvgHtml('apple', g()) + '</div>';
+    matchHtml += '<div class="h-cell hit">' + fruitSvgHtml('apple', g()) + '</div>';
+    matchHtml += '<div class="h-cell hit">' + fruitSvgHtml('apple', g()) + '</div>';
+    matchHtml += '<div class="h-arrow">⚡</div>';
+    matchHtml += '<div class="h-cell">' + fruitSvgHtml('orange', g()) + '</div>';
+    matchEl.innerHTML = matchHtml;
+
+    // Пример: 4 яблока в ряд -> бомба (фрукт + значок)
+    const bombEl = document.getElementById('help-example-bomb');
+    let bombHtml = '';
+    for (let i = 0; i < 4; i++) bombHtml += '<div class="h-cell hit">' + fruitSvgHtml('apple', g()) + '</div>';
+    bombHtml += '<div class="h-arrow">→</div>';
+    bombHtml += '<div class="h-cell hit"><span class="bomb-badge">💣</span>' + fruitSvgHtml('apple', g()) + '</div>';
+    bombEl.innerHTML = bombHtml;
+
+    // Пример: 5 клубник в ряд -> радуга
+    const rainbowEl = document.getElementById('help-example-rainbow');
+    let rainbowHtml = '';
+    for (let i = 0; i < 5; i++) rainbowHtml += '<div class="h-cell hit">' + fruitSvgHtml('strawberry', g()) + '</div>';
+    rainbowHtml += '<div class="h-arrow">→</div>';
+    rainbowHtml += '<div class="h-cell hit">' + bonusSvgHtml('rainbow', g()) + '</div>';
+    rainbowEl.innerHTML = rainbowHtml;
+}
+
 // ===== EVENT LISTENERS =====
 playAgainBtn.addEventListener('click', () => {
     if (vkAvailable()) {
@@ -1544,6 +1584,26 @@ restartBtn.addEventListener('click', () => {
     }
 });
 soundBtn.addEventListener('click', toggleSound);
+helpBtn.addEventListener('click', () => {
+    cancelActiveBooster();
+    helpResumesOnClose = gameStarted && !gameOverShown && !isPaused;
+    if (helpResumesOnClose) {
+        stopGameTimer();
+        isPaused = true;
+    }
+    buildHelpExamples();
+    helpModal.classList.add('active');
+    pauseModal.classList.remove('active');
+});
+helpCloseBtn.addEventListener('click', () => {
+    helpModal.classList.remove('active');
+    if (helpResumesOnClose) {
+        isPaused = false;
+        helpResumesOnClose = false;
+        updateTimerDisplay();
+        startGameTimer();
+    }
+});
 leaderboardBtn.addEventListener('click', showLeaderboard);
 leaderboardCloseBtn.addEventListener('click', () => leaderboardModal.classList.remove('active'));
 leaderboardResultsBtn.addEventListener('click', showLeaderboard);

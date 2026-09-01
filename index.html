@@ -67,6 +67,13 @@
                     <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
                 </svg>
             </button>
+            <button class="control-btn" id="help-btn" title="Помощь">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+            </button>
             <button class="control-btn" id="leaderboard-btn" title="Таблица лидеров">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z"></path>
@@ -137,6 +144,47 @@
                 </div>
                 <button class="play-again-btn" id="resume-continue-btn">ПРОДОЛЖИТЬ</button>
                 <button class="play-again-btn secondary" id="resume-new-btn">НОВАЯ ИГРА</button>
+            </div>
+        </div>
+
+        <div class="help-modal" id="help-modal">
+            <div class="modal-content help-content">
+                <h2 class="modal-title">КАК ИГРАТЬ</h2>
+
+                <div class="help-block">
+                    <div class="help-title">🎯 Цель</div>
+                    <div class="help-text">Собери максимум очков за 20 минут. Меняй соседние фрукты местами, чтобы собрать 3 или больше в ряд.</div>
+                </div>
+
+                <div class="help-block">
+                    <div class="help-title">↔️ Как собирать</div>
+                    <div class="help-text">Свапни два соседних фрукта. Совпали 3+ в ряд — они исчезнут, и выпадут новые.</div>
+                    <div class="help-example" id="help-example-match"></div>
+                </div>
+
+                <div class="help-block">
+                    <div class="help-title">💣 Бомба — собери 4 в ряд</div>
+                    <div class="help-text">Взрывает клетки вокруг себя (3×3) и даёт +1 💎. Чтобы взорвать, совмести бомбу с 2 фруктами её вида.</div>
+                    <div class="help-example" id="help-example-bomb"></div>
+                </div>
+
+                <div class="help-block">
+                    <div class="help-title">🌈 Радуга — собери 5 в ряд</div>
+                    <div class="help-text">Свапни радугу с любым фруктом, чтобы убрать все фрукты этого вида, +2 💎. Радуга + радуга — очистка всего поля!</div>
+                    <div class="help-example" id="help-example-rainbow"></div>
+                </div>
+
+                <div class="help-block">
+                    <div class="help-title">🔨🚀🔄 Бустеры</div>
+                    <div class="help-text">Молоток разбивает клетку, ракета сносит ряд и колонку, обмен меняет любые две клетки. Покупай за 💎 или рекламу в магазине.</div>
+                </div>
+
+                <div class="help-block">
+                    <div class="help-title">💾 Автосохранение</div>
+                    <div class="help-text">Выйдешь из игры — таймер встанет на паузу, а при возврате продолжишь с того же места.</div>
+                </div>
+
+                <button class="play-again-btn" id="help-close-btn">ПОНЯТНО</button>
             </div>
         </div>
 

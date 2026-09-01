@@ -348,6 +348,16 @@ body {
     animation: pulse 1s ease-in-out infinite;
 }
 
+.bomb-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    font-size: 15px;
+    z-index: 2;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+    pointer-events: none;
+}
+
 .cell.rainbow {
     background: linear-gradient(135deg, #FF6B6B, #FFE66D, #4ECDC4, #667eea, #764ba2);
     background-size: 300% 300%;
@@ -996,6 +1006,107 @@ body {
     width: 100%;
     margin: 10px 0 0;
 }
+
+/* ===== Help modal ===== */
+.help-modal {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 20px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    z-index: 130;
+}
+
+.help-modal.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.help-content {
+    width: 92%;
+    max-width: 420px;
+    max-height: 82%;
+    overflow-y: auto;
+    padding: 22px 18px;
+    text-align: left;
+    -webkit-overflow-scrolling: touch;
+}
+
+.help-content .modal-title {
+    text-align: center;
+}
+
+.help-block {
+    background: #f7f7fb;
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.help-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #764ba2;
+    margin-bottom: 6px;
+}
+
+.help-text {
+    font-size: 13px;
+    color: #444;
+    line-height: 1.45;
+}
+
+.help-example {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+.help-example .h-cell {
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+.help-example .h-cell svg {
+    width: 85%;
+    height: 85%;
+}
+
+.help-example .h-cell.hit {
+    box-shadow: 0 0 0 3px #FFE66D, inset 0 0 0 2px #FF8E53;
+    animation: pulse 1s ease-in-out infinite;
+}
+
+.help-example .h-cell .bomb-badge {
+    top: -3px;
+    right: -3px;
+    font-size: 12px;
+}
+
+.help-example .h-arrow {
+    font-size: 18px;
+    margin: 0 6px;
+    color: #FF6B6B;
+    font-weight: 700;
+}>
 
 @media (max-width: 480px) {
     .score-timer .score-value {
