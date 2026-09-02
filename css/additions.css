@@ -12,55 +12,106 @@
 
 @media (min-width: 768px) {
     body {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
         min-height: 100vh;
-        margin: 0;
+        padding: 12px 16px;
+        box-sizing: border-box;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     }
 
     .game-container {
-        max-width: 540px;
+        max-width: 560px !important;
         width: 100%;
-        max-height: 95vh;
-        margin: auto;
+        max-height: 96vh;
+        height: auto;
+        margin: 0 auto !important;
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
+        border-radius: 28px;
+        overflow: hidden;
+        padding: 14px 16px 18px 16px !important;
+        box-sizing: border-box;
+    }
+
+    .score-panel {
+        gap: 10px;
+        padding: 10px 12px;
+    }
+
+    .score-block {
+        min-height: 66px;
+    }
+
+    .score-label {
+        font-size: 11px;
     }
 
     .score-value {
-        font-size: clamp(24px, 3vw, 36px);
+        font-size: 22px;
+    }
+
+    .board {
+        margin: 10px auto !important;
+        gap: 4px;
     }
 
     .cell {
-        min-width: max(28px, 4vw);
-        min-height: max(28px, 4vw);
+        width: clamp(42px, 5vw, 56px) !important;
+        height: clamp(42px, 5vw, 56px) !important;
+        min-width: 42px !important;
+        min-height: 42px !important;
+        font-size: 22px !important;
+    }
+
+    .controls {
+        gap: 8px !important;
+        padding: 8px 0 6px !important;
+    }
+
+    .control-btn {
+        width: 44px !important;
+        height: 44px !important;
+    }
+
+    .boost-panel {
+        gap: 10px !important;
+    }
+
+    .boost-btn {
+        width: 72px !important;
+        height: 72px !important;
+    }
+
+    .modal-content {
+        max-width: 440px;
     }
 }
 
 @media (min-width: 1200px) {
     body {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        min-height: 100vh;
-        margin: 0;
+        padding: 16px 24px;
     }
 
     .game-container {
-        max-width: 540px;
-        width: 100%;
-        max-height: 95vh;
-        margin: auto;
-    }
-
-    .score-value {
-        font-size: clamp(24px, 3vw, 36px);
+        max-width: 580px !important;
+        padding: 18px 20px 20px 20px !important;
     }
 
     .cell {
-        min-width: max(32px, 3.5vw);
-        min-height: max(32px, 3.5vw);
+        width: clamp(48px, 4.2vw, 64px) !important;
+        height: clamp(48px, 4.2vw, 64px) !important;
+        min-width: 48px !important;
+        min-height: 48px !important;
+        font-size: 26px !important;
+    }
+
+    .score-value {
+        font-size: 26px;
+    }
+
+    .modal-content {
+        max-width: 480px;
     }
 }
 
@@ -79,7 +130,7 @@
 }
 
 .profile-modal {
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
     right: 0;
@@ -88,11 +139,11 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    border-radius: 20px;
+    border-radius: 0;
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.3s ease, visibility 0.3s ease;
-    z-index: 140;
+    z-index: 1000;
 }
 
 .profile-modal.active {
@@ -432,6 +483,18 @@
     color: #444;
     font-size: 13px;
     line-height: 1.45;
+}
+
+/* ========== TASKS MODAL FIX (DESKTOP) ========== */
+
+.tasks-modal {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    border-radius: 0 !important;
+    z-index: 999 !important;
 }
 
 /* ========== 5) КНОПКА ПОДЕЛИТЬСЯ В МОДАЛКЕ ========== */
