@@ -115,25 +115,368 @@ function vkAvailable() {
 const VK_KEYS = {
     sound: 'fruitBlastSoundEnabled',
     best: 'fruitBlastBestScore',
-    data: 'fruitBlastData'
+    data: 'fruitBlastData',
+    stats: 'fruitBlastStats',
+    dailyTasks: 'fruitBlastDailyTasks'
 };
+const _CS_ALL_KEYS = Object.values(VK_KEYS);
 
 function vkStorageGet(key) {
+    return vkStorageGetBatch([key]).then(obj => (obj && obj[key] !== undefined) ? obj[key] : null);
+}
+
+function vkStorageGetBatch(keysArr) {
     return new Promise(resolve => {
-        if (!vkAvailable()) { resolve(null); return; }
-        vkBridge.send('VKWebAppStorageGet', { keys: [key] }).then(res => {
-            if (res && res.keys && res.keys[0]) {
-                resolve(res.keys[0].value);
-            } else {
-                resolve(null);
+        const out = {};
+        if (!vkAvailable() || !Array.isArray(keysArr) || keysArr.length === 0) { resolve(out); return; }
+        const unique = [];
+        keysArr.forEach(k => { if (!unique.includes(k)) unique.push(k); });
+        vkBridge.send('VKWebAppStorageGet', { keys: unique }).then(res => {
+            if (res && Array.isArray(res.keys)) {
+                res.keys.forEach(row => { if (row && row.key !== undefined) out[row.key] = (row.value === undefined || row.value === null) ? null : row.value; });
             }
-        }).catch(() => resolve(null));
+            resolve(out);
+        }).catch(() => resolve(out));
     });
 }
 
 function vkStorageSet(key, value) {
     if (!vkAvailable()) return Promise.resolve();
     return vkBridge.send('VKWebAppStorageSet', { key: key, value: String(value) }).catch(() => {});
+}
+
+// =====================================================
+//  CLOUD SYNC — ЕДИНАЯ ОБЛАЧНАЯ СИНХРОНИЗАЦИЯ ВСЕХ ДАННЫХ
+// =====================================================
+const _CS = {
+    dirty: new Set(),
+    dirtyAt: 0,
+    pushTimer: null,
+    pushMs: 1200,
+    syncing: false,
+    intervalId: null,
+    intervalMs: 15000,
+    lastPullAt: 0,
+    lastPushAt: 0,
+    lbRefreshId: null,
+    lbMs: 10000,
+    lbCacheUntil: 0,
+    lbCached: null
+};
+
+function _cs_safeParseJSON(str, fallback) {
+    if (!str) return fallback;
+    try { return JSON.parse(str); } catch (e) { return fallback; }
+}
+
+function _cs_mergeNumbers(a, b) {
+    const an = Number(a) || 0;
+    const bn = Number(b) || 0;
+    return an > bn ? an : bn;
+}
+
+function _cs_mergeStats(localObj, remoteObj) {
+    if (!localObj && !remoteObj) return gameStats;
+    const baseL = localObj || {};
+    const baseR = remoteObj || {};
+    const keys = ['gamesPlayed', 'totalScore', 'bestScore', 'bestCombo', 'totalCombos', 'bombsCreated', 'rainbowsCreated', 'totalMatches', 'totalPlayTimeSec'];
+    const out = Object.assign({}, gameStats || {});
+    keys.forEach(k => { out[k] = Math.max(Number(baseL[k] || 0), Number(baseR[k] || 0), Number(out[k] || 0)); });
+    return out;
+}
+
+function _cs_mergeUserData(localObj, remoteObj) {
+    const L = localObj || {};
+    const R = remoteObj || {};
+    const Lb = L.boosters || {};
+    const Rb = R.boosters || {};
+    return {
+        boosters: {
+            hammer: Math.max(Number(Lb.hammer || 0), Number(Rb.hammer || 0), Number(boosters.hammer || 0)),
+            rocket: Math.max(Number(Lb.rocket || 0), Number(Rb.rocket || 0), Number(boosters.rocket || 0)),
+            swap:   Math.max(Number(Lb.swap   || 0), Number(Rb.swap   || 0), Number(boosters.swap   || 0))
+        },
+        diamonds: Math.max(Number(L.diamonds || 0), Number(R.diamonds || 0), Number(diamonds || 0))
+    };
+}
+
+function _cs_mergeTasks(localObj, remoteObj) {
+    const today = new Date().toISOString().slice(0, 10);
+    const L = localObj || null;
+    const R = remoteObj || null;
+    const Ltoday = L && L.date === today;
+    const Rtoday = R && R.date === today;
+    if (!Ltoday && !Rtoday) return { date: today, tasks: null, stale: true };
+    let A, B;
+    if (Ltoday && Rtoday) { A = L.tasks || []; B = R.tasks || []; }
+    else {
+        const fresh = Ltoday ? L : R;
+        return { date: today, tasks: (fresh && Array.isArray(fresh.tasks)) ? fresh.tasks : null, stale: false };
+    }
+    const merged = A.map(a => {
+        const b = B.find(x => x && x.id === a.id) || {};
+        return {
+            id: a.id,
+            type: a.type || b.type || 'score',
+            template: a.template || b.template || '',
+            icon: a.icon || b.icon || '',
+            target: Number(a.target || b.target || 1),
+            progress: Math.max(Number(a.progress || 0), Number(b.progress || 0)),
+            reward: Number(a.reward || b.reward || 0),
+            completed: !!a.completed || !!b.completed,
+            claimed: !!a.claimed || !!b.claimed,
+            name: a.name || b.name || ''
+        };
+    });
+    if (B.length > merged.length) {
+        B.forEach(b => {
+            if (!b || b.id == null) return;
+            if (!merged.find(m => m.id === b.id)) {
+                merged.push({
+                    id: b.id, type: b.type || 'score', template: b.template || '',
+                    icon: b.icon || '', target: Number(b.target || 1),
+                    progress: Number(b.progress || 0), reward: Number(b.reward || 0),
+                    completed: !!b.completed, claimed: !!b.claimed, name: b.name || ''
+                });
+            }
+        });
+    }
+    return { date: today, tasks: merged, stale: false };
+}
+
+function _cs_mergeSound(localVal, remoteVal) {
+    if (localVal === '1' || localVal === '0') return localVal === '1';
+    if (remoteVal === 'true' || remoteVal === '1' || remoteVal === 'false' || remoteVal === '0') return remoteVal === 'true' || remoteVal === '1';
+    if (soundEnabled != null) return soundEnabled;
+    return true;
+}
+
+function _cs_applyToRuntime(state) {
+    if (!state) return;
+    let changed = false;
+    if (typeof state.best === 'number' && state.best > bestScore) {
+        bestScore = state.best;
+        bestScoreLoaded = true;
+        changed = true;
+    }
+    if (typeof state.sound === 'boolean' && state.sound !== soundEnabled) {
+        soundEnabled = state.sound;
+        changed = true;
+    }
+    if (state.userData && state.userData.boosters) {
+        ['hammer', 'rocket', 'swap'].forEach(id => {
+            const n = Number(state.userData.boosters[id] || 0);
+            if (n > (boosters[id] || 0)) { boosters[id] = n; changed = true; }
+        });
+    }
+    if (typeof state.userDataDiamonds === 'number' && state.userDataDiamonds > diamonds) {
+        diamonds = state.userDataDiamonds;
+        changed = true;
+    }
+    if (state.stats) {
+        Object.keys(state.stats).forEach(k => {
+            const v = Number(state.stats[k] || 0);
+            if (gameStats && (gameStats[k] == null || v > gameStats[k])) { gameStats[k] = v; changed = true; }
+        });
+    }
+    if (state.tasks && state.tasks.date && Array.isArray(state.tasks.tasks) && state.tasks.tasks.length > 0) {
+        const today = new Date().toISOString().slice(0, 10);
+        if (state.tasks.date === today) {
+            const rem = state.tasks.tasks;
+            if (!Array.isArray(dailyTasks) || dailyTasks.length === 0) {
+                dailyTasks = rem;
+                dailyTasksDate = today;
+                changed = true;
+            } else {
+                let lc = false;
+                rem.forEach(b => {
+                    const a = dailyTasks.find(x => x && x.id === b.id);
+                    if (a) {
+                        const np = Math.max(Number(a.progress || 0), Number(b.progress || 0));
+                        const nc = !!a.completed || !!b.completed;
+                        const ncl = !!a.claimed || !!b.claimed;
+                        if (np !== a.progress) { a.progress = np; lc = true; }
+                        if (nc !== a.completed) { a.completed = nc; lc = true; }
+                        if (ncl !== a.claimed) { a.claimed = ncl; lc = true; }
+                    } else {
+                        dailyTasks.push({
+                            id: b.id, type: b.type || 'score', template: b.template || '',
+                            icon: b.icon || '', target: Number(b.target || 1),
+                            progress: Number(b.progress || 0), reward: Number(b.reward || 0),
+                            completed: !!b.completed, claimed: !!b.claimed, name: b.name || ''
+                        });
+                        lc = true;
+                    }
+                });
+                if (lc) { dailyTasksDate = today; changed = true; }
+            }
+        }
+    }
+    return changed;
+}
+
+function _cs_localReadAll() {
+    return {
+        sound: localStorage.getItem('fruitBlastSoundLocal'),
+        best: localStorage.getItem('fruitBlastBestScore'),
+        data: localStorage.getItem(VK_KEYS.data),
+        stats: localStorage.getItem('fruitBlastStats'),
+        dailyTasks: localStorage.getItem('fruitBlastDailyTasks')
+    };
+}
+
+function cloudSync_pullAll() {
+    return vkStorageGetBatch(_CS_ALL_KEYS).then(remote => {
+        const local = _cs_localReadAll();
+        const rSound = (remote && remote[VK_KEYS.sound] != null) ? remote[VK_KEYS.sound] : null;
+        const rBest = (remote && remote[VK_KEYS.best] != null) ? remote[VK_KEYS.best] : null;
+        const rData = (remote && remote[VK_KEYS.data] != null) ? remote[VK_KEYS.data] : null;
+        const rStats = (remote && remote[VK_KEYS.stats] != null) ? remote[VK_KEYS.stats] : null;
+        const rTasks = (remote && remote[VK_KEYS.dailyTasks] != null) ? remote[VK_KEYS.dailyTasks] : null;
+
+        const localSound = local.sound;
+        const bestSound = _cs_mergeSound(localSound, rSound);
+
+        const localBestRaw = local.best;
+        const mergedBest = Math.max(
+            Number(localBestRaw || 0),
+            Number(rBest || 0),
+            Number(bestScore || 0)
+        );
+
+        const localDataObj = _cs_safeParseJSON(local.data, null);
+        const remoteDataObj = _cs_safeParseJSON(rData, null);
+        const mergedUserData = _cs_mergeUserData(localDataObj, remoteDataObj);
+
+        const localStatsObj = _cs_safeParseJSON(local.stats, null);
+        const remoteStatsObj = _cs_safeParseJSON(rStats, null);
+        const mergedStats = _cs_mergeStats(localStatsObj, remoteStatsObj);
+
+        const localTasksObj = _cs_safeParseJSON(local.dailyTasks, null);
+        const remoteTasksObj = _cs_safeParseJSON(rTasks, null);
+        const mergedTasks = _cs_mergeTasks(localTasksObj, remoteTasksObj);
+
+        const runtimeState = {
+            sound: bestSound,
+            best: mergedBest,
+            userData: mergedUserData,
+            userDataDiamonds: mergedUserData.diamonds,
+            stats: mergedStats,
+            tasks: mergedTasks.stale ? null : mergedTasks
+        };
+        if (mergedTasks.stale && (!Array.isArray(dailyTasks) || dailyTasks.length === 0)) {
+            generateDailyTasks();
+        }
+        const changed = _cs_applyToRuntime(runtimeState);
+        return { changed, remote, mergedStats, mergedUserData, mergedBest, mergedTasks, mergedSound: bestSound };
+    });
+}
+
+function cloudSync_pushAllImmediate() {
+    if (_CS.pushTimer) { clearTimeout(_CS.pushTimer); _CS.pushTimer = null; }
+    const calls = [];
+    const dirtyKeys = _CS_ALL_KEYS;
+    dirtyKeys.forEach(key => {
+        let vStr = null;
+        switch (key) {
+            case VK_KEYS.sound:  vStr = soundEnabled ? 'true' : 'false'; localStorage.setItem('fruitBlastSoundLocal', soundEnabled ? '1' : '0'); break;
+            case VK_KEYS.best:   vStr = String(bestScore || 0); localStorage.setItem('fruitBlastBestScore', vStr); break;
+            case VK_KEYS.data: {
+                const obj = { boosters, diamonds };
+                vStr = JSON.stringify(obj);
+                try { localStorage.setItem(key, vStr); } catch (e) {}
+                break;
+            }
+            case VK_KEYS.stats: {
+                vStr = JSON.stringify(gameStats || {});
+                try { localStorage.setItem('fruitBlastStats', vStr); } catch (e) {}
+                break;
+            }
+            case VK_KEYS.dailyTasks: {
+                vStr = JSON.stringify({ date: dailyTasksDate, tasks: dailyTasks });
+                try { localStorage.setItem('fruitBlastDailyTasks', vStr); } catch (e) {}
+                break;
+            }
+        }
+        if (vStr != null) calls.push(vkStorageSet(key, vStr));
+    });
+    _CS.dirty.clear();
+    _CS.dirtyAt = 0;
+    _CS.lastPushAt = Date.now();
+    return Promise.all(calls).catch(() => {});
+}
+
+function cloudSync_markDirty() {
+    _CS.dirtyAt = Date.now();
+    if (_CS.pushTimer) return;
+    _CS.pushTimer = setTimeout(() => {
+        _CS.pushTimer = null;
+        cloudSync_pushAllImmediate();
+    }, _CS.pushMs);
+}
+
+function cloudSync_flushNow() {
+    return cloudSync_pushAllImmediate();
+}
+
+function cloudSync_renderUI() {
+    try { updateDiamondUI(); } catch (e) {}
+    try { updateBoostPanel(); } catch (e) {}
+    try { if (bestScoreDisplay) bestScoreDisplay.textContent = '🏆 ' + bestScore; } catch (e) {}
+    try { if (soundBtn) soundBtn.textContent = soundEnabled ? '🔊' : '🔇'; } catch (e) {}
+    try { if (soundWaves) soundWaves.style.display = soundEnabled ? 'flex' : 'none'; } catch (e) {}
+    try { updateDailyTasksBadge(); } catch (e) {}
+    try { renderTasksModalIfOpen(); } catch (e) {}
+    try { renderProfileModalIfOpen(); } catch (e) {}
+    try { renderStoreIfOpen(); } catch (e) {}
+}
+
+function cloudSync_fullSync(pullOnly) {
+    if (_CS.syncing) return _CS.syncingPromise || Promise.resolve({ changed: false });
+    _CS.syncing = true;
+    _CS.syncingPromise = cloudSync_pullAll().then(res => {
+        const changed = !!(res && res.changed);
+        if (changed) cloudSync_renderUI();
+        if (pullOnly !== true) {
+            return cloudSync_pushAllImmediate().then(() => {
+                _CS.lastPullAt = Date.now();
+                _CS.syncing = false;
+                _CS.syncingPromise = null;
+                return Object.assign({}, res || {}, { pushed: true });
+            });
+        }
+        _CS.lastPullAt = Date.now();
+        _CS.syncing = false;
+        _CS.syncingPromise = null;
+        return res || { changed: false };
+    }).catch(err => {
+        console.warn('[cloudSync] fullSync error:', err);
+        _CS.syncing = false;
+        _CS.syncingPromise = null;
+        return { changed: false, error: err };
+    });
+    return _CS.syncingPromise;
+}
+
+function cloudSync_prepareForModal(name) {
+    const pull = cloudSync_fullSync(true);
+    return pull.then(res => {
+        if (window._leaderboard && name === 'leaderboard') {
+            // дополнительный синхронный пуш рекорда перед показом
+            if (score > 0 || bestScore > 0) submitLeaderboard(Math.max(score, bestScore));
+        }
+        return res;
+    });
+}
+
+function cloudSync_startInterval() {
+    cloudSync_stopInterval();
+    _CS.intervalId = setInterval(() => {
+        cloudSync_fullSync(false);
+    }, _CS.intervalMs);
+}
+function cloudSync_stopInterval() {
+    if (_CS.intervalId) { clearInterval(_CS.intervalId); _CS.intervalId = null; }
 }
 
 function fetchUserInfo() {
@@ -416,44 +759,38 @@ const dailyTasksCount = document.getElementById('daily-tasks-count');
 
 // ===== VK STORAGE / PLAYER =====
 function getSoundSetting(defaultVal) {
-    return new Promise(resolve => {
-        const local = localStorage.getItem('fruitBlastSoundLocal');
-        if (local !== null) {
-            resolve(local === '1');
-            return;
-        }
-        vkStorageGet(VK_KEYS.sound).then(val => {
-            if (val !== null && val !== undefined && val !== '') {
-                resolve(val === 'true' || val === '1');
-            } else {
-                resolve(defaultVal);
-            }
-        });
+    const local = localStorage.getItem('fruitBlastSoundLocal');
+    if (local !== null) return Promise.resolve(local === '1');
+    return vkStorageGet(VK_KEYS.sound).then(val => {
+        if (val !== null && val !== undefined && val !== '') return val === 'true' || val === '1';
+        return defaultVal;
     });
 }
 
 function fetchBestScore() {
-    return new Promise(resolve => {
-        const local = parseInt(localStorage.getItem('fruitBlastBestScore')) || 0;
-        vkStorageGet(VK_KEYS.best).then(val => {
-            const vkBest = val ? parseInt(val) || 0 : 0;
-            bestScore = Math.max(local, vkBest);
-            resolve(bestScore);
-        }).catch(() => {
-            bestScore = parseInt(localStorage.getItem('fruitBlastBestScore')) || 0;
-            resolve(bestScore);
-        });
+    const local = parseInt(localStorage.getItem('fruitBlastBestScore')) || 0;
+    return vkStorageGet(VK_KEYS.best).then(val => {
+        const vkBest = val ? parseInt(val) || 0 : 0;
+        bestScore = Math.max(local, vkBest);
+        bestScoreLoaded = true;
+        return bestScore;
+    }).catch(() => {
+        bestScore = parseInt(localStorage.getItem('fruitBlastBestScore')) || 0;
+        bestScoreLoaded = true;
+        return bestScore;
     });
 }
 
 function persistBestScore() {
-    localStorage.setItem('fruitBlastBestScore', bestScore);
-    vkStorageSet(VK_KEYS.best, bestScore);
+    localStorage.setItem('fruitBlastBestScore', String(bestScore));
+    cloudSync_markDirty();
 }
 
 function persistSoundSetting() {
     localStorage.setItem('fruitBlastSoundLocal', soundEnabled ? '1' : '0');
-    vkStorageSet(VK_KEYS.sound, soundEnabled ? 'true' : 'false');
+    cloudSync_markDirty();
+    try { if (soundBtn) soundBtn.textContent = soundEnabled ? '🔊' : '🔇'; } catch (e) {}
+    try { if (soundWaves) soundWaves.style.display = soundEnabled ? 'flex' : 'none'; } catch (e) {}
 }
 
 function loadUserData() {
@@ -463,29 +800,21 @@ function loadUserData() {
             const localData = raw ? JSON.parse(raw) : null;
             vkStorageGet(VK_KEYS.data).then(val => {
                 let vkData = null;
-                if (val) {
-                    try { vkData = JSON.parse(val); } catch (e) {}
-                }
+                if (val) try { vkData = JSON.parse(val); } catch (e) {}
                 resolve(vkData && localData ? { boosters: { ...vkData.boosters, ...localData.boosters }, diamonds: Math.max(vkData.diamonds || 0, localData.diamonds || 0) } : (vkData || localData));
             }).catch(() => resolve(localData));
-        } catch (e) {
-            resolve(null);
-        }
+        } catch (e) { resolve(null); }
     });
 }
 
 function persistUserData() {
     const data = { boosters, diamonds };
-    try {
-        localStorage.setItem(VK_KEYS.data, JSON.stringify(data));
-    } catch (e) {}
-    vkStorageSet(VK_KEYS.data, JSON.stringify(data));
+    try { localStorage.setItem(VK_KEYS.data, JSON.stringify(data)); } catch (e) {}
+    cloudSync_markDirty();
 }
 
 function flushAllSaves() {
-    persistBestScore();
-    persistSoundSetting();
-    persistUserData();
+    return cloudSync_flushNow();
 }
 
 function addDiamonds(n) {
@@ -493,6 +822,28 @@ function addDiamonds(n) {
     if (diamonds < 0) diamonds = 0;
     updateDiamondUI();
     persistUserData();
+}
+
+function renderTasksModalIfOpen() {
+    const m = document.getElementById('tasks-modal');
+    if (!m || !m.classList.contains('active')) return;
+    showTasksModal();
+}
+
+function renderProfileModalIfOpen() {
+    const m = document.getElementById('profile-modal');
+    if (!m || !m.classList.contains('active')) return;
+    showProfileModal();
+}
+
+function renderStoreIfOpen() {
+    if (!storeModal || !storeModal.classList.contains('active')) return;
+    try {
+        if (storeDiamondBalance) storeDiamondBalance.textContent = '💎 ' + diamonds;
+        if (purchaseOwned && storeSelectedBooster != null) {
+            purchaseOwned.textContent = 'У вас: ' + (boosters[storeSelectedBooster] || 0);
+        }
+    } catch (e) {}
 }
 
 function updateDiamondUI() {
@@ -735,10 +1086,63 @@ function showLeaderboard() {
             currentUser.vk_user_id,
             currentUser.first_name + (currentUser.last_name ? ' ' + currentUser.last_name : ''),
             currentUser.photo_100,
-            score
+            score,
+            (users) => {
+                _CS.lbCached = Array.isArray(users) ? users : [];
+                _CS.lbCacheUntil = Date.now() + _CS.lbMs;
+            }
         );
     } else {
         leaderboardList.innerHTML = '<div class="leaderboard-empty">Модуль лидерборда не загружен.</div>';
+    }
+    startLeaderboardRefresh();
+}
+
+function startLeaderboardRefresh() {
+    stopLeaderboardRefresh();
+    if (!window._leaderboard) return;
+    _CS.lbRefreshId = setInterval(async () => {
+        if (!leaderboardModal.classList.contains('active')) {
+            stopLeaderboardRefresh();
+            return;
+        }
+        try {
+            let users;
+            const now = Date.now();
+            if (_CS.lbCached && now < _CS.lbCacheUntil) {
+                users = _CS.lbCached;
+            } else {
+                users = await window._leaderboard.fetchLeaderboardAsync();
+                _CS.lbCached = Array.isArray(users) ? users : [];
+                _CS.lbCacheUntil = now + _CS.lbMs;
+            }
+            if (!Array.isArray(users)) users = [];
+            const ok = window._leaderboard.diffUpdateLeaderboard(
+                leaderboardList, users, currentUser.vk_user_id, score
+            );
+            if (!ok) {
+                window._leaderboard.openLeaderboardUIEnhanced(
+                    leaderboardList,
+                    currentUser.vk_user_id,
+                    currentUser.first_name + (currentUser.last_name ? ' ' + currentUser.last_name : ''),
+                    currentUser.photo_100,
+                    score,
+                    (fresh) => {
+                        _CS.lbCached = Array.isArray(fresh) ? fresh : [];
+                        _CS.lbCacheUntil = Date.now() + _CS.lbMs;
+                    }
+                );
+            }
+        } catch (e) {
+            console.warn('[leaderboard] refresh error:', e);
+        }
+    }, _CS.lbMs);
+}
+
+function stopLeaderboardRefresh() {
+    if (_CS.lbRefreshId) {
+        clearInterval(_CS.lbRefreshId);
+        _CS.lbRefreshId = null;
     }
 }
 
@@ -973,18 +1377,14 @@ function loadStats() {
         const raw = localStorage.getItem('fruitBlastStats');
         if (raw) Object.assign(gameStats, JSON.parse(raw));
     } catch (e) {}
-    vkStorageGet('fruitBlastStats').then(val => {
-        if (val) {
-            try { Object.assign(gameStats, JSON.parse(val)); } catch (e) {}
-        }
+    vkStorageGet(VK_KEYS.stats).then(val => {
+        if (val) try { Object.assign(gameStats, JSON.parse(val)); } catch (e) {}
     }).catch(() => {});
 }
 
 function saveStats() {
-    try {
-        localStorage.setItem('fruitBlastStats', JSON.stringify(gameStats));
-    } catch (e) {}
-    vkStorageSet('fruitBlastStats', JSON.stringify(gameStats));
+    try { localStorage.setItem('fruitBlastStats', JSON.stringify(gameStats)); } catch (e) {}
+    cloudSync_markDirty();
 }
 
 function recordGameEnd(finalScore, playTimeSec) {
@@ -1080,24 +1480,22 @@ function loadDailyTasks() {
         }
         return false;
     };
+    let loadedLocal = false;
     try {
         const raw = localStorage.getItem('fruitBlastDailyTasks');
-        if (raw && loadFromData(JSON.parse(raw))) {
-            vkStorageGet('fruitBlastDailyTasks').then(v => {
-                if (v) { try { loadFromData(JSON.parse(v)); } catch (e) {} }
-            }).catch(() => {});
-            return;
-        }
+        if (raw && loadFromData(JSON.parse(raw))) loadedLocal = true;
     } catch (e) {}
-    vkStorageGet('fruitBlastDailyTasks').then(v => {
+    vkStorageGet(VK_KEYS.dailyTasks).then(v => {
+        let loadedVk = false;
         if (v) {
-            try {
-                const data = JSON.parse(v);
-                if (loadFromData(data)) return;
-            } catch (e) {}
+            try { loadedVk = loadFromData(JSON.parse(v)); } catch (e) {}
         }
-        generateDailyTasks();
-    }).catch(() => generateDailyTasks());
+        if (!loadedLocal && !loadedVk) generateDailyTasks();
+        else updateDailyTasksBadge();
+    }).catch(() => {
+        if (!loadedLocal) generateDailyTasks();
+    });
+    if (loadedLocal) updateDailyTasksBadge();
 }
 
 function generateDailyTasks() {
@@ -1124,10 +1522,8 @@ function generateDailyTasks() {
 
 function saveDailyTasks() {
     const payload = JSON.stringify({ date: dailyTasksDate, tasks: dailyTasks });
-    try {
-        localStorage.setItem('fruitBlastDailyTasks', payload);
-    } catch (e) {}
-    vkStorageSet('fruitBlastDailyTasks', payload);
+    try { localStorage.setItem('fruitBlastDailyTasks', payload); } catch (e) {}
+    cloudSync_markDirty();
     updateDailyTasksBadge();
 }
 
@@ -2330,14 +2726,22 @@ helpCloseBtn.addEventListener('click', () => {
         startGameTimer();
     }
 });
-leaderboardBtn.addEventListener('click', showLeaderboard);
-leaderboardCloseBtn.addEventListener('click', () => leaderboardModal.classList.remove('active'));
-leaderboardResultsBtn.addEventListener('click', showLeaderboard);
+leaderboardBtn.addEventListener('click', () => {
+    cancelActiveBooster();
+    cloudSync_prepareForModal('leaderboard').finally(() => showLeaderboard());
+});
+leaderboardCloseBtn.addEventListener('click', () => {
+    leaderboardModal.classList.remove('active');
+    stopLeaderboardRefresh();
+});
+leaderboardResultsBtn.addEventListener('click', () => {
+    cloudSync_prepareForModal('leaderboard').finally(() => showLeaderboard());
+});
 
 if (userInfo) {
     const openProfile = () => {
         cancelActiveBooster();
-        showProfileModal();
+        cloudSync_prepareForModal('profile').finally(() => showProfileModal());
     };
     userInfo.addEventListener('click', openProfile);
     userInfo.addEventListener('keydown', (e) => {
@@ -2356,10 +2760,13 @@ if (shareGameoverBtn && window._share) {
 
 if (tasksBtn) tasksBtn.addEventListener('click', () => {
     cancelActiveBooster();
-    showTasksModal();
+    cloudSync_prepareForModal('tasks').finally(() => showTasksModal());
 });
 
-storeBtn.addEventListener('click', openStore);
+storeBtn.addEventListener('click', () => {
+    cancelActiveBooster();
+    cloudSync_prepareForModal('store').finally(() => openStore());
+});
 storeCloseBtn.addEventListener('click', closeStore);
 boostPanel.addEventListener('click', (e) => {
     const btn = e.target.closest('.boost-btn');
@@ -2385,19 +2792,29 @@ gameBoard.addEventListener('touchstart', handleTouchStart, { passive: true });
 gameBoard.addEventListener('touchend', handleTouchEnd, { passive: true });
 
 document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-        if (gameStarted && !gameOverShown) {
+    if (document.visibilityState === 'hidden' || document.hidden) {
+        if (gameStarted && !gameOverShown && !isPaused) {
             stopGameTimer();
             saveGameState();
         }
+        stopLeaderboardRealtimeSync();
+        stopLeaderboardRefresh();
+        if (score > 0 && score > _lbLastSubmittedScore) {
+            submitLeaderboard(score);
+        }
         flushAllSaves();
     } else {
-        // Вернулись в приложение — если есть незавершённая игра, предложить продолжить
         if (!gameOverShown && !isPaused && gameStarted) {
             resumeModal.classList.remove('active');
         }
         if (savedGame && !gameOverShown && !isPaused && gameStarted) {
             showResumeModal();
+        }
+        if (gameStarted && !gameOverShown && !isPaused && !gameTimerInterval) {
+            startGameTimer();
+        }
+        if (leaderboardModal.classList.contains('active') && window._leaderboard) {
+            startLeaderboardRefresh();
         }
     }
 });
@@ -2405,9 +2822,10 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('pagehide', () => {
     if (gameStarted && !gameOverShown) {
         stopGameTimer();
-        stopLeaderboardRealtimeSync();
         saveGameState();
     }
+    stopLeaderboardRealtimeSync();
+    stopLeaderboardRefresh();
     flushAllSaves();
     if (score > 0 && currentUser.vk_user_id && window._leaderboard) {
         try {
@@ -2427,22 +2845,6 @@ window.addEventListener('pagehide', () => {
                 navigator.sendBeacon(workerUrl + '/submit', blob);
             }
         } catch (_) {}
-    }
-});
-
-document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') {
-        if (gameStarted && !gameOverShown && !isPaused) {
-            stopGameTimer();
-            saveGameState();
-        }
-        if (score > 0 && score > _lbLastSubmittedScore) {
-            submitLeaderboard(score);
-        }
-    } else if (document.visibilityState === 'visible') {
-        if (gameStarted && !gameOverShown && !isPaused && !gameTimerInterval) {
-            startGameTimer();
-        }
     }
 });
 
@@ -2483,6 +2885,10 @@ async function boot() {
     loadStats();
     loadDailyTasks();
     updateDailyTasksBadge();
+
+    // Cloud sync: полная синхронизация после загрузки, затем периодический интервал
+    cloudSync_fullSync(false);
+    cloudSync_startInterval();
 
     // Есть ли незавершённая игра (таймер остановлен, сохранено состояние)?
     const pending = loadSavedGame();

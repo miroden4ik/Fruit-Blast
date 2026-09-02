@@ -139,7 +139,7 @@ function _hasAvatar(user) {
  * @param {string} [userAvatarUrl] - URL аватарки текущего игрока
  * @param {number} [currentScoreNow] - текущий счёт игрока (не обязательно рекорд)
  */
-async function openLeaderboardUIEnhanced(containerEl, currentVkUserId, userNameFull, userAvatarUrl, currentScoreNow) {
+async function openLeaderboardUIEnhanced(containerEl, currentVkUserId, userNameFull, userAvatarUrl, currentScoreNow, onData) {
     if (!containerEl) return;
 
     containerEl.innerHTML = '';
@@ -157,6 +157,7 @@ async function openLeaderboardUIEnhanced(containerEl, currentVkUserId, userNameF
         containerEl.innerHTML = '';
 
         const allUsers = Array.isArray(users) ? users : [];
+        if (typeof onData === 'function') onData(allUsers);
 
         const myIdx = currentVkUserId
             ? allUsers.findIndex(u => String(u.vk_user_id) === String(currentVkUserId))
@@ -184,6 +185,10 @@ async function openLeaderboardUIEnhanced(containerEl, currentVkUserId, userNameF
             const user = top3[slot.idx];
             const placeCard = document.createElement('div');
             placeCard.className = 'lb-podium-slot lb-place-' + slot.rank;
+            if (user && user.vk_user_id != null) {
+                placeCard.dataset.userId = String(user.vk_user_id);
+            }
+            placeCard.dataset.rank = String(slot.rank);
             const isFirst = slot.rank === 1;
             const scale = isFirst ? '1.0' : '0.9';
             const cardHeight = isFirst ? '160px' : '130px';
@@ -255,6 +260,7 @@ async function openLeaderboardUIEnhanced(containerEl, currentVkUserId, userNameF
 
             const scoreP = document.createElement('div');
             scoreP.className = 'lb-podium-score';
+            scoreP.dataset.score = String(user ? (user.score || 0) : 0);
             scoreP.innerHTML =
                 '<span class="lb-podium-score-num">' + (user ? (user.score || 0) : 0) + '</span>' +
                 '<span class="lb-podium-score-trophy">🏆</span>';
@@ -336,6 +342,8 @@ async function openLeaderboardUIEnhanced(containerEl, currentVkUserId, userNameF
                 const row = document.createElement('div');
                 row.className = 'lb-list-row';
                 row.dataset.userId = user && user.vk_user_id ? String(user.vk_user_id) : '';
+                row.dataset.rank = String(rank);
+                row.dataset.score = String(user && user.score ? user.score : 0);
                 row.setAttribute('role', 'listitem');
                 const isMe = currentVkUserId && user && String(user.vk_user_id) === String(currentVkUserId);
                 row.style.cssText =
@@ -381,9 +389,9 @@ async function openLeaderboardUIEnhanced(containerEl, currentVkUserId, userNameF
                 const metaEl = document.createElement('div');
                 metaEl.className = 'lb-list-meta';
                 metaEl.innerHTML =
-                    '<span class="lb-meta-current">Счёт: <b>' + (user.score || 0) + '</b></span>' +
+                    '<span class="lb-meta-current">Счёт: <b data-score="' + (user.score || 0) + '">' + (user.score || 0) + '</b></span>' +
                     '<span class="lb-meta-dot">•</span>' +
-                    '<span class="lb-meta-best">Рекорд: <b>' + (user.score || 0) + '</b></span>';
+                    '<span class="lb-meta-best">Рекорд: <b data-best="' + (user.score || 0) + '">' + (user.score || 0) + '</b></span>';
                 metaEl.style.cssText =
                     'font-size:11px;color:#888;display:flex;align-items:center;gap:5px;flex-wrap:wrap;';
                 infoCol.appendChild(metaEl);
@@ -396,6 +404,7 @@ async function openLeaderboardUIEnhanced(containerEl, currentVkUserId, userNameF
                     'flex-shrink:0;text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:2px;';
                 const sBig = document.createElement('div');
                 sBig.className = 'lb-list-score';
+                sBig.dataset.score = String(user && user.score ? user.score : 0);
                 sBig.innerHTML = '<b>' + (user.score || 0) + '</b> 🏆';
                 sBig.style.cssText =
                     'font-weight:900;font-size:15px;color:#FF6B6B;white-space:nowrap;';
@@ -418,6 +427,11 @@ async function openLeaderboardUIEnhanced(containerEl, currentVkUserId, userNameF
             const isBetter = (typeof currentScoreNow === 'number') && currentScoreNow > myRecord;
 
             selfCard.className = 'lb-self-card';
+            selfCard.dataset.userId = String(currentVkUserId);
+            selfCard.dataset.self = '1';
+            selfCard.dataset.rank = myRank != null ? String(myRank) : '';
+            selfCard.dataset.record = String(myRecord || 0);
+            selfCard.dataset.now = (typeof currentScoreNow === 'number') ? String(currentScoreNow) : '';
             selfCard.style.cssText =
                 'display:flex;align-items:center;gap:10px;' +
                 'padding:12px 14px;margin-top:8px;border-radius:16px;' +
@@ -471,10 +485,10 @@ async function openLeaderboardUIEnhanced(containerEl, currentVkUserId, userNameF
             metaS.className = 'lb-self-meta';
             let metaParts = [];
             if (typeof currentScoreNow === 'number') {
-                metaParts.push('<span class="lb-meta-current">Сейчас: <b>' + currentScoreNow + '</b></span>');
+                metaParts.push('<span class="lb-meta-current">Сейчас: <b data-now="' + currentScoreNow + '">' + currentScoreNow + '</b></span>');
             }
             if (showRecord) {
-                metaParts.push('<span class="lb-meta-best">Рекорд: <b>' + myRecord + '</b></span>');
+                metaParts.push('<span class="lb-meta-best">Рекорд: <b data-record="' + myRecord + '">' + myRecord + '</b></span>');
             } else {
                 metaParts.push('<span class="lb-meta-best" style="opacity:0.85">Рекорд пока не сохранён</span>');
             }
@@ -490,6 +504,7 @@ async function openLeaderboardUIEnhanced(containerEl, currentVkUserId, userNameF
                 'flex-shrink:0;text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:2px;';
             const scBig = document.createElement('div');
             scBig.className = 'lb-self-score';
+            scBig.dataset.score = String(displayScore || 0);
             scBig.innerHTML = '<b>' + displayScore + '</b> 🏆';
             scBig.style.cssText = 'font-weight:900;font-size:16px;color:#8B4513;white-space:nowrap;';
             scS.appendChild(scBig);
@@ -526,8 +541,176 @@ async function openLeaderboardUIEnhanced(containerEl, currentVkUserId, userNameF
     }
 }
 
+/**
+ * Быстрый diff-рефреш счётов в DOM без пересборки (пока модалка открыта).
+ * Находит элементы по data-user-id и data-rank и обновляет только текст счёта.
+ * Если состав/порядок топ-100 изменился кардинально — возвращает `false`,
+ * и тогда вызывающая сторона должна перерендерить всю таблицу.
+ */
+function diffUpdateLeaderboard(containerEl, freshUsers, currentVkUserId, currentScoreNow) {
+    if (!containerEl || !containerEl.parentNode) return false;
+    const users = Array.isArray(freshUsers) ? freshUsers : [];
+
+    const podium = containerEl.querySelector('.lb-podium');
+    const listScroll = containerEl.querySelector('.lb-list-scroll');
+    const selfCard = containerEl.querySelector('.lb-self-card');
+
+    let totalChanged = 0;
+    const setTextSafe = (el, text) => {
+        if (!el) return;
+        if (el.textContent !== String(text)) {
+            el.textContent = String(text);
+            totalChanged++;
+        }
+    };
+    const setHtmlSafe = (el, html) => {
+        if (!el) return;
+        if (el.innerHTML !== html) {
+            el.innerHTML = html;
+            totalChanged++;
+        }
+    };
+    const setDataset = (el, k, v) => {
+        if (!el || el.dataset[k] === String(v)) return;
+        el.dataset[k] = String(v);
+        totalChanged++;
+    };
+
+    // === Top-3 podium ===
+    if (podium) {
+        const freshTop3 = users.slice(0, 3);
+        const expectedOrder = [1, 0, 2];
+        expectedOrder.forEach((topIdx, k) => {
+            const slotRank = [2, 1, 3][k];
+            const slotEl = podium.querySelector('.lb-place-' + slotRank);
+            const freshUser = freshTop3[topIdx];
+            if (!slotEl) return;
+            if (freshUser && freshUser.vk_user_id != null) setDataset(slotEl, 'userId', freshUser.vk_user_id);
+            const scoreWrap = slotEl.querySelector('.lb-podium-score');
+            const scoreNum = scoreWrap ? scoreWrap.querySelector('.lb-podium-score-num') : null;
+            const newScore = freshUser ? (freshUser.score || 0) : 0;
+            if (scoreWrap) {
+                if (scoreWrap.dataset.score !== String(newScore)) {
+                    setDataset(scoreWrap, 'score', newScore);
+                }
+            }
+            setTextSafe(scoreNum, newScore);
+            const nameEl = slotEl.querySelector('.lb-podium-name');
+            if (nameEl && freshUser) {
+                const expected = _fullName(freshUser) || ('Игрок ' + slotRank);
+                if (nameEl.textContent !== expected) {
+                    nameEl.textContent = expected;
+                    nameEl.title = expected;
+                    totalChanged++;
+                }
+            }
+        });
+    }
+
+    // === List rows 4..100 ===
+    // Если количество строк в DOM не совпадает (кто-то новый вошёл в топ-100) → сигнал на full-рендер
+    if (listScroll) {
+        const rows = listScroll.querySelectorAll('.lb-list-row');
+        const expectedRows = Math.max(0, users.length - 3);
+        if (users.length > 3 && rows.length !== expectedRows && expectedRows > 0) {
+            // Если различие меньше 5 и это конец списка — ок, просто обновим счета существующих
+            const okToDiff = Math.abs(rows.length - expectedRows) <= 3;
+            if (!okToDiff) return false;
+        }
+
+        users.forEach((user, i) => {
+            if (i < 3) return;
+            const rank = i + 1;
+            const localIdx = i - 3;
+            const row = rows[localIdx];
+            if (!row) return;
+            const newScore = user && user.score ? user.score : 0;
+            if (user && user.vk_user_id != null) setDataset(row, 'userId', user.vk_user_id);
+            setDataset(row, 'rank', rank);
+            setDataset(row, 'score', newScore);
+            const rankEl = row.querySelector('.lb-list-rank');
+            setTextSafe(rankEl, '#' + rank);
+
+            const scoreBig = row.querySelector('.lb-list-score');
+            if (scoreBig) {
+                if (scoreBig.dataset.score !== String(newScore)) {
+                    setDataset(scoreBig, 'score', newScore);
+                    setHtmlSafe(scoreBig, '<b>' + newScore + '</b> 🏆');
+                } else {
+                    const bEl = scoreBig.querySelector('b');
+                    setTextSafe(bEl, newScore);
+                }
+            }
+            const metaCur = row.querySelector('.lb-meta-current b');
+            const metaBest = row.querySelector('.lb-meta-best b');
+            if (metaCur) {
+                setDataset(metaCur, 'score', newScore);
+                setTextSafe(metaCur, newScore);
+            }
+            if (metaBest) {
+                setDataset(metaBest, 'best', newScore);
+                setTextSafe(metaBest, newScore);
+            }
+            const nameEl = row.querySelector('.lb-list-name');
+            if (nameEl && user) {
+                const expected = _fullName(user) || ('Игрок ' + rank);
+                if (nameEl.textContent !== expected) {
+                    nameEl.textContent = expected;
+                    nameEl.title = expected;
+                    totalChanged++;
+                }
+            }
+        });
+    }
+
+    // === Self card ===
+    if (selfCard && currentVkUserId != null) {
+        const myIdx = users.findIndex(u => String(u.vk_user_id) === String(currentVkUserId));
+        const myRank = myIdx >= 0 ? (myIdx + 1) : null;
+        const myRecord = myIdx >= 0 ? (users[myIdx].score || 0) : 0;
+        if (myRank != null) setDataset(selfCard, 'rank', myRank);
+        setDataset(selfCard, 'record', myRecord);
+        if (typeof currentScoreNow === 'number') setDataset(selfCard, 'now', currentScoreNow);
+
+        const rankNum = selfCard.querySelector('.lb-self-rank-num');
+        const rankPlace = selfCard.querySelector('.lb-self-rank');
+        if (myRank) {
+            if (!rankNum && rankPlace) {
+                setHtmlSafe(rankPlace, '<span class="lb-self-rank-num" style="font-weight:900;font-size:18px;color:#8B4513;text-shadow:0 1px 0 rgba(255,255,255,0.5);">#' + myRank + '</span>');
+            } else if (rankNum) {
+                setTextSafe(rankNum, '#' + myRank);
+            }
+        } else {
+            setHtmlSafe(rankPlace, '<span class="lb-self-rank-placeholder" style="font-weight:700;font-size:11px;color:#8B4513;opacity:0.9;">Вне топ-100</span>');
+        }
+
+        const displayScore = (typeof currentScoreNow === 'number' && currentScoreNow > 0)
+            ? currentScoreNow
+            : (myRecord > 0 ? myRecord : 0);
+        const selfScore = selfCard.querySelector('.lb-self-score');
+        if (selfScore) {
+            setDataset(selfScore, 'score', displayScore);
+            const b = selfScore.querySelector('b');
+            setTextSafe(b, displayScore);
+        }
+
+        const nowB = selfCard.querySelector('.lb-meta-current b');
+        const recB = selfCard.querySelector('.lb-meta-best b');
+        if (nowB && typeof currentScoreNow === 'number') {
+            setDataset(nowB, 'now', currentScoreNow);
+            setTextSafe(nowB, currentScoreNow);
+        }
+        if (recB && myRecord > 0) {
+            setDataset(recB, 'record', myRecord);
+            setTextSafe(recB, myRecord);
+        }
+    }
+    return true;
+}
+
 window._leaderboard = {
     submitScoreAsync: submitScoreAsync,
     fetchLeaderboardAsync: fetchLeaderboardAsync,
-    openLeaderboardUIEnhanced: openLeaderboardUIEnhanced
+    openLeaderboardUIEnhanced: openLeaderboardUIEnhanced,
+    diffUpdateLeaderboard: diffUpdateLeaderboard
 };
