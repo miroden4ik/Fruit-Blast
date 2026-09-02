@@ -1,0 +1,514 @@
+/* ================================================
+   additions.css — дополнительные стили для style.css
+   ================================================ */
+
+/* ========== 0) HELP ? BUTTON FIX ========== */
+
+#help-btn svg {
+    display: block;
+}
+
+/* ========== 1) ДЕСКТОП MEDIA-ЗАПРОСЫ ========== */
+
+@media (min-width: 768px) {
+    body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        margin: 0;
+    }
+
+    .game-container {
+        max-width: 540px;
+        width: 100%;
+        max-height: 95vh;
+        margin: auto;
+    }
+
+    .score-value {
+        font-size: clamp(24px, 3vw, 36px);
+    }
+
+    .cell {
+        min-width: max(28px, 4vw);
+        min-height: max(28px, 4vw);
+    }
+}
+
+@media (min-width: 1200px) {
+    body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        margin: 0;
+    }
+
+    .game-container {
+        max-width: 540px;
+        width: 100%;
+        max-height: 95vh;
+        margin: auto;
+    }
+
+    .score-value {
+        font-size: clamp(24px, 3vw, 36px);
+    }
+
+    .cell {
+        min-width: max(32px, 3.5vw);
+        min-height: max(32px, 3.5vw);
+    }
+}
+
+/* ========== 2) ПРОФИЛЬ ========== */
+
+.user-info {
+    cursor: pointer;
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    border: 2px solid transparent;
+}
+
+.user-info:hover {
+    transform: scale(1.04);
+    box-shadow: 0 6px 22px rgba(102, 126, 234, 0.45);
+    border-color: #FFE66D;
+}
+
+.profile-modal {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 20px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    z-index: 140;
+}
+
+.profile-modal.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.profile-content {
+    width: 92%;
+    max-width: 520px;
+    max-height: 84%;
+    overflow-y: auto;
+    padding: 26px 22px;
+    background: linear-gradient(180deg, #ffffff 0%, #f7f7ff 100%);
+    border-radius: 22px;
+    text-align: center;
+    -webkit-overflow-scrolling: touch;
+    animation: profile-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.profile-content .modal-title {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 20px;
+}
+
+.profile-avatar-wrap {
+    position: relative;
+    display: inline-block;
+    margin-bottom: 14px;
+}
+
+.profile-avatar-large {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid transparent;
+    background: linear-gradient(135deg, #FFD700, #FFA500, #FFD700);
+    padding: 4px;
+    box-shadow: 0 8px 28px rgba(255, 183, 77, 0.45);
+}
+
+.profile-name-lg {
+    font-size: 20px;
+    font-weight: 800;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.profile-id {
+    font-size: 13px;
+    color: #888;
+    margin-bottom: 18px;
+}
+
+.profile-content .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 16px 0 8px;
+}
+
+.profile-content .stat-card {
+    background: rgba(255, 255, 255, 0.1);
+    background: #f0f0fa;
+    border-radius: 12px;
+    padding: 12px;
+    text-align: center;
+}
+
+.profile-content .stat-value {
+    background: linear-gradient(135deg, #FF6B6B, #FF8E53);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.profile-section-title {
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #764ba2;
+    margin: 20px 0 10px;
+    text-align: left;
+}
+
+.profile-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+    border-radius: 16px;
+    margin-bottom: 18px;
+    text-align: left;
+}
+
+.profile-avatar-wrap {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.profile-user-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.profile-name {
+    font-size: 19px;
+    font-weight: 800;
+    color: #2c2c3a;
+    margin-bottom: 8px;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.profile-level-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.profile-label {
+    color: #666;
+    font-weight: 600;
+}
+
+.profile-value {
+    font-weight: 800;
+    color: #764ba2;
+}
+
+.profile-content .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 16px 0 8px;
+}
+
+.profile-content .stat-card,
+.stats-modal .stat-card {
+    background: #f0f0fa;
+    border-radius: 12px;
+    padding: 12px 8px;
+    text-align: center;
+}
+
+.stat-icon {
+    font-size: 22px;
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.stat-value {
+    font-size: 16px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #FF6B6B, #FF8E53);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 2px;
+}
+
+.stat-label {
+    font-size: 11px;
+    color: #888;
+    font-weight: 600;
+}
+
+/* Game button fallback */
+.game-btn {
+    width: 100%;
+    border: none;
+    border-radius: 30px;
+    padding: 13px 24px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+/* ========== 3) ЛИДЕРБОРД ТОП-3 ========== */
+
+.lb-top3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.lb-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 14px 10px;
+    border-radius: 16px;
+    border-width: 3px;
+    border-style: solid;
+    background: #fdfdff;
+    position: relative;
+    animation: lb-fade-in 0.5s ease-out backwards;
+}
+
+.lb-card:nth-child(1) { animation-delay: 0.05s; }
+.lb-card:nth-child(2) { animation-delay: 0.15s; }
+.lb-card:nth-child(3) { animation-delay: 0.25s; }
+
+.lb-card.gold {
+    border: 3px solid;
+    border-image: linear-gradient(135deg, #FFD700, #FFA500, #FFD700) 1;
+    border-radius: 16px;
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.4), inset 0 1px 0 rgba(255, 215, 0, 0.25);
+    background: linear-gradient(180deg, #fff9e6 0%, #fff4cc 100%);
+}
+
+.lb-card.silver {
+    border: 3px solid;
+    border-image: linear-gradient(135deg, #C0C0C0, #E8E8E8, #A0A0A0) 1;
+    border-radius: 16px;
+    box-shadow: 0 0 20px rgba(192, 192, 192, 0.3);
+    background: linear-gradient(180deg, #fafafa 0%, #f0f0f0 100%);
+}
+
+.lb-card.bronze {
+    border: 3px solid;
+    border-image: linear-gradient(135deg, #CD7F32, #B8860B, #CD7F32) 1;
+    border-radius: 16px;
+    box-shadow: 0 0 20px rgba(205, 127, 50, 0.3);
+    background: linear-gradient(180deg, #fff6ea 0%, #fcecd5 100%);
+}
+
+.crown-top {
+    position: absolute;
+    top: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 30px;
+    line-height: 1;
+    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.25));
+}
+
+.lb-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin: 8px 0 6px;
+    border: 3px solid #fff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.lb-rank {
+    font-weight: 800;
+    color: #764ba2;
+    font-size: 18px;
+}
+
+.lb-rank-first {
+    font-size: 36px;
+    line-height: 1;
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.lb-name {
+    flex: 1;
+    margin: 0 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+    font-weight: 700;
+    color: #333;
+    max-width: 90px;
+}
+
+.lb-card .lb-score {
+    margin-top: 4px;
+    font-size: 16px;
+    text-align: center;
+}
+
+.lb-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 12px;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+}
+
+.lb-row.compact {
+    padding: 4px 10px;
+    font-size: 13px;
+}
+
+/* ========== 4) FAQ БЛОК ========== */
+
+.faq-block {
+    margin-top: 16px;
+    text-align: left;
+}
+
+.faq-item {
+    margin-bottom: 10px;
+    background: #f7f7fb;
+    border-radius: 10px;
+    padding: 10px 12px;
+}
+
+.faq-q {
+    font-weight: 700;
+    color: #FFE66D;
+    color: #B8860B;
+    margin-bottom: 4px;
+    font-size: 14px;
+}
+
+.faq-a {
+    padding-left: 12px;
+    opacity: 0.9;
+    color: #444;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+/* ========== 5) КНОПКА ПОДЕЛИТЬСЯ В МОДАЛКЕ ========== */
+
+.share-btn-in-modal {
+    width: 100%;
+    border: none;
+    border-radius: 30px;
+    padding: 13px 24px;
+    background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%);
+    color: white;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 4px 15px rgba(78, 205, 196, 0.4);
+    margin-top: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.share-btn-in-modal:hover {
+    transform: scale(1.04);
+    box-shadow: 0 6px 22px rgba(78, 205, 196, 0.55);
+}
+
+.share-btn-in-modal:active {
+    transform: scale(0.97);
+}
+
+.share-btn-in-modal svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* ========== 6) KEYFRAMES / АНИМАЦИИ ========== */
+
+@keyframes lb-fade-in {
+    0% {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes profile-pop {
+    0% {
+        opacity: 0;
+        transform: scale(0.85) translateY(12px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+@keyframes modal-fade-slide {
+    0% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.profile-modal .modal-content,
+.stats-modal .modal-content,
+.tasks-modal .modal-content,
+.leaderboard-modal .modal-content,
+.help-modal .modal-content,
+.store-modal .modal-content {
+    animation: modal-fade-slide 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
