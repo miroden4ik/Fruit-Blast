@@ -72,6 +72,31 @@ function votesLabel(n) {
 }
 
 // ===== VK BRIDGE LAYER =====
+let currentUser = {
+    vk_user_id: null,
+    first_name: '',
+    last_name: '',
+    photo_100: ''
+};
+let vkSignParamsStr = '';
+
+function getVKLaunchParamsStr() {
+    try {
+        const hash = window.location.hash || '';
+        const query = window.location.search || '';
+        const full = (query + '&' + hash.replace(/^#/, '')).replace(/^&/, '');
+        const params = new URLSearchParams(full);
+        const vkKeys = [...params.keys()].filter(k => k.startsWith('vk_'));
+        vkKeys.sort();
+        const parts = vkKeys.map(k => `${k}=${encodeURIComponent(params.get(k) || '')}`);
+        const sign = params.get('sign');
+        if (sign) parts.push(`sign=${encodeURIComponent(sign)}`);
+        return parts.join('&');
+    } catch (e) {
+        return '';
+    }
+}
+
 function initVkBridge() {
     return new Promise(resolve => {
         if (typeof vkBridge !== 'undefined' && vkBridge.send) {
@@ -112,9 +137,19 @@ function vkStorageSet(key, value) {
 }
 
 function fetchUserInfo() {
+    vkSignParamsStr = getVKLaunchParamsStr();
+    try {
+        const lp = new URLSearchParams((window.location.search || '') + '&' + (window.location.hash || '').replace(/^#/, ''));
+        const uid = lp.get('vk_user_id');
+        if (uid) currentUser.vk_user_id = Number(uid) || uid;
+    } catch (_) {}
     if (!vkAvailable()) return;
     vkBridge.send('VKWebAppGetUserInfo', {}).then(res => {
         if (res && res.first_name) {
+            currentUser.vk_user_id = currentUser.vk_user_id || (res.id != null ? res.id : null);
+            currentUser.first_name = res.first_name || '';
+            currentUser.last_name = res.last_name || '';
+            currentUser.photo_100 = res.photo_100 || '';
             userName.textContent = res.first_name + (res.last_name ? ' ' + res.last_name : '');
             if (res.photo_100) {
                 userAvatar.src = res.photo_100;
@@ -308,12 +343,14 @@ let savedGame = null; // автосохранённое состояние (вр
 let helpResumesOnClose = false;
 
 // ===== DOM =====
+const gameContainer = document.querySelector('.game-container');
 const gameBoard = document.getElementById('game-board');
 const scoreDisplay = document.getElementById('score');
 const bestScoreDisplay = document.getElementById('best-score');
 const gameOverModal = document.getElementById('game-over-modal');
 const finalScore = document.getElementById('final-score');
 const modalBestScore = document.getElementById('modal-best-score');
+const shareGameoverBtn = document.getElementById('share-gameover-btn');
 const pauseModal = document.getElementById('pause-modal');
 const leaderboardModal = document.getElementById('leaderboard-modal');
 const playAgainBtn = document.getElementById('play-again-btn');
@@ -608,19 +645,36 @@ function showResumeModal() {
     pauseModal.classList.remove('active');
 }
 
-// VK leaderboards require server-side integration (VK Services) or setting up
-// through the developer console. We expose a hook that can be wired to your backend.
 function submitLeaderboard() {
-    // TODO: wire to your VK leaderboard backend (VK Services / custom API)
-    return Promise.resolve();
+    if (!currentUser.vk_user_id || !window._leaderboard) return Promise.resolve();
+    return window._leaderboard.submitScoreAsync(bestScore, {
+        vk_user_id: currentUser.vk_user_id,
+        first_name: currentUser.first_name,
+        last_name: currentUser.last_name,
+        photo_100: currentUser.photo_100,
+        vk_sign_params: vkSignParamsStr || null
+    }).then(res => {
+        if (res && res.updated) {
+            console.log('[leaderboard] Новый рекорд сохранён:', res.new_score);
+        }
+        return res;
+    }).catch(err => {
+        console.warn('[leaderboard] Ошибка отправки:', err);
+    });
 }
 
 function showLeaderboard() {
     leaderboardModal.classList.add('active');
-    leaderboardList.innerHTML = '<div class="leaderboard-loading">Загрузка...</div>';
-    // VK Mini Apps does not have a direct Bridge method for game leaderboards.
-    // Integrate via VK Services/backend. For now show a placeholder.
-    leaderboardList.innerHTML = '<div class="leaderboard-empty">Таблица лидеров VK настраивается через консоль разработчика и бэкенд. Пока доступны только локальные рекорды.</div>';
+    if (window._leaderboard) {
+        window._leaderboard.openLeaderboardUIEnhanced(
+            leaderboardList,
+            currentUser.vk_user_id,
+            currentUser.first_name + (currentUser.last_name ? ' ' + currentUser.last_name : ''),
+            currentUser.photo_100
+        );
+    } else {
+        leaderboardList.innerHTML = '<div class="leaderboard-empty">Модуль лидерборда не загружен.</div>';
+    }
 }
 
 function showFullscreenAd() {
@@ -720,15 +774,16 @@ function showTutorial() {
 
     const overlay = document.createElement('div');
     overlay.id = 'tutorial-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:200;pointer-events:none;';
     overlay.innerHTML = `
-        <div class="tutorial-backdrop"></div>
-        <div class="tutorial-spotlight" id="tutorial-spotlight"></div>
-        <div class="tutorial-text" id="tutorial-text"></div>
-        <div class="tutorial-arrow" id="tutorial-arrow"></div>
-        <button class="tutorial-btn" id="tutorial-skip-btn">Пропустить</button>
-        <button class="tutorial-btn tutorial-next" id="tutorial-next-btn">Далее</button>
+        <div class="tutorial-backdrop" style="position:absolute;inset:0;background:rgba(0,0,0,0.6);"></div>
+        <div class="tutorial-spotlight" id="tutorial-spotlight" style="position:absolute;pointer-events:none;box-shadow:0 0 0 9999px rgba(0,0,0,0.55);border-radius:10px;"></div>
+        <div class="tutorial-text" id="tutorial-text" style="position:absolute;left:50%;transform:translateX(-50%);top:30px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:12px 20px;border-radius:14px;font-weight:700;font-size:15px;box-shadow:0 6px 20px rgba(0,0,0,0.25);pointer-events:none;white-space:nowrap;"></div>
+        <div class="tutorial-arrow" id="tutorial-arrow" style="position:absolute;width:40px;height:40px;pointer-events:none;z-index:201;"></div>
+        <button class="tutorial-btn" id="tutorial-skip-btn" style="pointer-events:auto;position:absolute;right:16px;top:16px;background:#fff;color:#555;border:none;padding:8px 14px;border-radius:10px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.15);">Пропустить</button>
+        <button class="tutorial-btn tutorial-next" id="tutorial-next-btn" style="pointer-events:auto;position:absolute;left:50%;transform:translateX(-50%);bottom:36px;background:linear-gradient(135deg,#FF6B6B,#FFB347);color:#fff;border:none;padding:12px 28px;border-radius:14px;font-weight:800;cursor:pointer;box-shadow:0 6px 18px rgba(255,107,107,0.4);font-size:15px;">Далее</button>
     `;
-    gameBoard.appendChild(overlay);
+    gameContainer.appendChild(overlay);
     document.getElementById('tutorial-skip-btn').addEventListener('click', completeTutorial);
     document.getElementById('tutorial-next-btn').addEventListener('click', tutorialNextStep);
 
@@ -762,7 +817,7 @@ function tutorialShowStep(step) {
         positionSpotlight(spotlight, cell);
         positionArrow(arrow, tutorialMove.from, tutorialMove.to);
         arrow.style.display = 'block';
-        text.textContent = 'Поменяй его местами с этим';
+        text.textContent = 'Поменяй его местами с соседним';
         text.className = 'tutorial-text';
         nextBtn.textContent = 'Понял!';
     } else {
@@ -778,11 +833,10 @@ function tutorialNextStep() {
 
 function positionSpotlight(spotlight, cellEl) {
     const rect = cellEl.getBoundingClientRect();
-    const boardRect = gameBoard.getBoundingClientRect();
-    spotlight.style.left = (rect.left - boardRect.left + rect.width / 2) + 'px';
-    spotlight.style.top = (rect.top - boardRect.top + rect.height / 2) + 'px';
-    spotlight.style.width = rect.width + 'px';
-    spotlight.style.height = rect.height + 'px';
+    spotlight.style.left = (rect.left - 3) + 'px';
+    spotlight.style.top = (rect.top - 3) + 'px';
+    spotlight.style.width = (rect.width + 6) + 'px';
+    spotlight.style.height = (rect.height + 6) + 'px';
     spotlight.classList.add('visible');
 }
 
@@ -791,15 +845,16 @@ function positionArrow(arrow, from, to) {
     const toCell = matrixCells[to.row][to.col];
     const fromRect = fromCell.getBoundingClientRect();
     const toRect = toCell.getBoundingClientRect();
-    const boardRect = gameBoard.getBoundingClientRect();
-    const fx = fromRect.left - boardRect.left + fromRect.width / 2;
-    const fy = fromRect.top - boardRect.top + fromRect.height / 2;
-    const tx = toRect.left - boardRect.left + toRect.width / 2;
-    const ty = toRect.top - boardRect.top + toRect.height / 2;
+    const fx = fromRect.left + fromRect.width / 2;
+    const fy = fromRect.top + fromRect.height / 2;
+    const tx = toRect.left + toRect.width / 2;
+    const ty = toRect.top + toRect.height / 2;
     const angle = Math.atan2(ty - fy, tx - fx) * 180 / Math.PI;
-    arrow.style.left = fx + 'px';
-    arrow.style.top = fy + 'px';
-    arrow.style.setProperty('--arrow-angle', angle + 'deg');
+    const dx = (tx - fx) / 2;
+    const dy = (ty - fy) / 2;
+    arrow.style.left = (fx + dx - 20) + 'px';
+    arrow.style.top = (fy + dy - 20) + 'px';
+    arrow.innerHTML = `<svg viewBox="0 0 40 40" style="width:100%;height:100%;transform:rotate(${angle}deg);"><path d="M4 20 L30 20 M22 12 L32 20 L22 28" stroke="#FFE66D" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 }
 
 function findTutorialMove() {
@@ -853,6 +908,11 @@ function loadStats() {
         const raw = localStorage.getItem('fruitBlastStats');
         if (raw) Object.assign(gameStats, JSON.parse(raw));
     } catch (e) {}
+    vkStorageGet('fruitBlastStats').then(val => {
+        if (val) {
+            try { Object.assign(gameStats, JSON.parse(val)); } catch (e) {}
+        }
+    }).catch(() => {});
 }
 
 function saveStats() {
@@ -883,13 +943,13 @@ function formatPlayTimeSec(sec) {
     return m + 'м';
 }
 
-function showStatsModal() {
-    const existing = document.getElementById('stats-modal');
+function showProfileModal() {
+    const existing = document.getElementById('profile-modal');
     if (existing) existing.remove();
 
     const modal = document.createElement('div');
-    modal.className = 'stats-modal active';
-    modal.id = 'stats-modal';
+    modal.className = 'profile-modal active';
+    modal.id = 'profile-modal';
 
     const stats = [
         { icon: '🎮', value: gameStats.gamesPlayed,  label: 'Игр сыграно' },
@@ -907,15 +967,38 @@ function showStatsModal() {
         `<div class="stat-card"><div class="stat-icon">${s.icon}</div><div class="stat-value">${s.value}</div><div class="stat-label">${s.label}</div></div>`
     ).join('');
 
+    const fullName = [currentUser.first_name, currentUser.last_name].filter(Boolean).join(' ').trim() || 'Игрок';
+    const avatarSrc = currentUser.photo_100 || '';
+
     modal.innerHTML = `
-        <div class="modal-content stats-content">
-            <h2 class="modal-title">СТАТИСТИКА</h2>
+        <div class="modal-content profile-content">
+            <h2 class="modal-title">ПРОФИЛЬ</h2>
+            <div class="profile-header">
+                <div class="profile-avatar-wrap">
+                    <img class="profile-avatar-large" alt="" src="${avatarSrc}" ${!avatarSrc ? 'style="display:none"' : ''}>
+                    ${!avatarSrc ? `<div class="profile-avatar-large placeholder" style="display:flex;align-items:center;justify-content:center;">👤</div>` : ''}
+                </div>
+                <div class="profile-user-info">
+                    <div class="profile-name">${fullName}</div>
+                    <div class="profile-level-row">
+                        <span class="profile-label">💎 Алмазы:</span>
+                        <span class="profile-value">${diamonds}</span>
+                    </div>
+                    <div class="profile-level-row">
+                        <span class="profile-label">🏆 Рекорд:</span>
+                        <span class="profile-value">${bestScore}</span>
+                    </div>
+                </div>
+            </div>
             <div class="stats-grid">${cardsHtml}</div>
-            <button class="play-again-btn" id="stats-close-btn">ЗАКРЫТЬ</button>
+            <button class="play-again-btn" id="profile-close-btn">ЗАКРЫТЬ</button>
         </div>
     `;
     gameBoard.parentElement.appendChild(modal);
-    document.getElementById('stats-close-btn').addEventListener('click', () => modal.remove());
+    document.getElementById('profile-close-btn').addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.remove();
+    });
 }
 
 // ===== DAILY TASKS =====
@@ -1048,6 +1131,8 @@ function showTasksModal() {
 }
 
 // ===== BOARD LOGIC =====
+let autoSaveIntervalId = null;
+
 function initGame() {
     board = [];
     score = 0;
@@ -1059,6 +1144,7 @@ function initGame() {
     matchesThisGame = 0;
     bombsCreatedThisGame = 0;
     rainbowsCreatedThisGame = 0;
+    comboHitsThisGame = 0;
     selectedCell = null;
     isProcessing = false;
     isPaused = false;
@@ -1068,6 +1154,11 @@ function initGame() {
     diamondsAwardedForScore = 0;
     timeLeft = GAME_DURATION;
     clearSavedGame();
+
+    if (autoSaveIntervalId) clearInterval(autoSaveIntervalId);
+    autoSaveIntervalId = setInterval(() => {
+        if (gameStarted && !gameOverShown && !isPaused) saveGameState();
+    }, 5000);
 
     updateScoreDisplay();
     updateBoostPanel();
@@ -2155,10 +2246,26 @@ leaderboardBtn.addEventListener('click', showLeaderboard);
 leaderboardCloseBtn.addEventListener('click', () => leaderboardModal.classList.remove('active'));
 leaderboardResultsBtn.addEventListener('click', showLeaderboard);
 
-if (statsBtn) statsBtn.addEventListener('click', () => {
-    cancelActiveBooster();
-    showStatsModal();
-});
+if (userInfo) {
+    const openProfile = () => {
+        cancelActiveBooster();
+        showProfileModal();
+    };
+    userInfo.addEventListener('click', openProfile);
+    userInfo.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            openProfile();
+        }
+    });
+}
+if (shareGameoverBtn && window._share) {
+    shareGameoverBtn.addEventListener('click', () => {
+        const isBest = score >= bestScore;
+        window._share.shareScore(score, isBest);
+    });
+}
+
 if (tasksBtn) tasksBtn.addEventListener('click', () => {
     cancelActiveBooster();
     showTasksModal();
