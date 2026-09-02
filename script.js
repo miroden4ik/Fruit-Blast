@@ -155,6 +155,13 @@ function fetchUserInfo() {
                 userAvatar.src = res.photo_100;
                 userAvatar.hidden = false;
             }
+            setTimeout(() => {
+                if (bestScoreLoaded && bestScore > 0) {
+                    submitLeaderboard(bestScore);
+                } else if (score > 0) {
+                    submitLeaderboard(score);
+                }
+            }, 1200);
         }
     }).catch(() => {});
 }
@@ -553,6 +560,7 @@ function stopGameTimer() {
 
 function endGameByTime() {
     stopGameTimer();
+    stopLeaderboardRealtimeSync();
     gameOverShown = true;
     isPaused = false;
 
@@ -571,6 +579,10 @@ function endGameByTime() {
     gameOverModal.classList.add('active');
     pauseModal.classList.remove('active');
     updateDailyTasksBadge();
+
+    if (score > 0) {
+        setTimeout(() => submitLeaderboard(score), 400);
+    }
 }
 
 // ===== AUTOSAVE (полное состояние игры) =====
@@ -624,6 +636,7 @@ function restoreSavedGame(state) {
     isPaused = false;
     activeBooster = null;
     swapBoostPick = null;
+    startLeaderboardRealtimeSync();
     updateScoreDisplay();
     updateBoostPanel();
     updateTimerDisplay();
@@ -645,22 +658,73 @@ function showResumeModal() {
     pauseModal.classList.remove('active');
 }
 
-function submitLeaderboard() {
+// ===== РЕАЛТАЙМ СИНХРОНИЗАЦИЯ ЛИДЕРБОРДА =====
+let _lbSubmitThrottleUntil = 0;
+let _lbSubmitPending = false;
+let _lbLastSubmittedScore = -1;
+let _lbSyncIntervalId = null;
+const LB_SUBMIT_MIN_INTERVAL_MS = 15000;
+const LB_SYNC_PERIODIC_MS = 20000;
+
+function submitLeaderboard(forceScore) {
     if (!currentUser.vk_user_id || !window._leaderboard) return Promise.resolve();
-    return window._leaderboard.submitScoreAsync(bestScore, {
+
+    const scoreToSend = typeof forceScore === 'number' ? forceScore : score;
+    if (scoreToSend < 0) return Promise.resolve();
+
+    const now = Date.now();
+    if (now < _lbSubmitThrottleUntil && scoreToSend <= _lbLastSubmittedScore && !forceScore) {
+        return Promise.resolve({ throttled: true });
+    }
+
+    if (_lbSubmitPending) {
+        return Promise.resolve({ pending: true });
+    }
+
+    _lbSubmitPending = true;
+    _lbSubmitThrottleUntil = now + LB_SUBMIT_MIN_INTERVAL_MS;
+
+    return window._leaderboard.submitScoreAsync(scoreToSend, {
         vk_user_id: currentUser.vk_user_id,
         first_name: currentUser.first_name,
         last_name: currentUser.last_name,
         photo_100: currentUser.photo_100,
         vk_sign_params: vkSignParamsStr || null
     }).then(res => {
-        if (res && res.updated) {
-            console.log('[leaderboard] Новый рекорд сохранён:', res.new_score);
+        if (res) {
+            if (res.updated) {
+                console.log('[leaderboard] ✓ Новый рекорд сохранён:', res.new_score);
+                _lbLastSubmittedScore = Math.max(_lbLastSubmittedScore, res.new_score || 0);
+            } else if (res.score != null) {
+                _lbLastSubmittedScore = Math.max(_lbLastSubmittedScore, res.score);
+            } else {
+                _lbLastSubmittedScore = Math.max(_lbLastSubmittedScore, scoreToSend);
+            }
+        } else {
+            _lbLastSubmittedScore = Math.max(_lbLastSubmittedScore, scoreToSend);
         }
         return res;
     }).catch(err => {
         console.warn('[leaderboard] Ошибка отправки:', err);
+    }).finally(() => {
+        _lbSubmitPending = false;
     });
+}
+
+function startLeaderboardRealtimeSync() {
+    stopLeaderboardRealtimeSync();
+    _lbSyncIntervalId = setInterval(() => {
+        if (gameStarted && !gameOverShown && !isPaused && score > 0 && score > _lbLastSubmittedScore) {
+            submitLeaderboard(score);
+        }
+    }, LB_SYNC_PERIODIC_MS);
+}
+
+function stopLeaderboardRealtimeSync() {
+    if (_lbSyncIntervalId) {
+        clearInterval(_lbSyncIntervalId);
+        _lbSyncIntervalId = null;
+    }
 }
 
 function showLeaderboard() {
@@ -670,7 +734,8 @@ function showLeaderboard() {
             leaderboardList,
             currentUser.vk_user_id,
             currentUser.first_name + (currentUser.last_name ? ' ' + currentUser.last_name : ''),
-            currentUser.photo_100
+            currentUser.photo_100,
+            score
         );
     } else {
         leaderboardList.innerHTML = '<div class="leaderboard-empty">Модуль лидерборда не загружен.</div>';
@@ -1178,6 +1243,8 @@ function initGame() {
         if (gameStarted && !gameOverShown && !isPaused) saveGameState();
     }, 5000);
 
+    startLeaderboardRealtimeSync();
+
     updateScoreDisplay();
     updateBoostPanel();
     updateTimerDisplay();
@@ -1193,6 +1260,10 @@ function initGame() {
     leaderboardModal.classList.remove('active');
     pauseModal.classList.remove('active');
     startGameTimer();
+
+    if (bestScore > 0 && bestScoreLoaded) {
+        setTimeout(() => submitLeaderboard(bestScore), 1500);
+    }
 
     setTimeout(() => showTutorial(), 600);
 }
@@ -2334,9 +2405,45 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('pagehide', () => {
     if (gameStarted && !gameOverShown) {
         stopGameTimer();
+        stopLeaderboardRealtimeSync();
         saveGameState();
     }
     flushAllSaves();
+    if (score > 0 && currentUser.vk_user_id && window._leaderboard) {
+        try {
+            const workerUrl = (typeof CONFIG !== 'undefined' && CONFIG.WORKER_URL)
+                ? CONFIG.WORKER_URL.replace(/\/$/, '')
+                : null;
+            if (workerUrl && !workerUrl.includes('REPLACE_WITH_YOUR_WORKER_URL') && navigator.sendBeacon) {
+                const payload = {
+                    vk_user_id: currentUser.vk_user_id,
+                    first_name: currentUser.first_name,
+                    last_name: currentUser.last_name,
+                    photo_100: currentUser.photo_100,
+                    score: Math.max(score, bestScore || 0),
+                    vk_sign_params: vkSignParamsStr || null
+                };
+                const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+                navigator.sendBeacon(workerUrl + '/submit', blob);
+            }
+        } catch (_) {}
+    }
+});
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+        if (gameStarted && !gameOverShown && !isPaused) {
+            stopGameTimer();
+            saveGameState();
+        }
+        if (score > 0 && score > _lbLastSubmittedScore) {
+            submitLeaderboard(score);
+        }
+    } else if (document.visibilityState === 'visible') {
+        if (gameStarted && !gameOverShown && !isPaused && !gameTimerInterval) {
+            startGameTimer();
+        }
+    }
 });
 
 // ===== BOOT =====
