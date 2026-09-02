@@ -17,6 +17,27 @@ const BONUS_SVG = {
 
 const FRUIT_TYPES = Object.keys(FRUIT_SVG);
 
+const FRUIT_COLORS = {
+    apple: '#FF6B6B',
+    orange: '#FFB347',
+    strawberry: '#FF6B9D',
+    grape: '#9B59B6',
+    watermelon: '#E74C3C',
+    lemon: '#F1C40F'
+};
+
+const COMBO_COLORS = ['#27AE60', '#2ECC71', '#F1C40F', '#E67E22', '#E74C3C', '#9B59B6', '#3498DB'];
+
+// ===== DAILY TASKS =====
+const DAILY_TASK_DEFS = [
+    { type: 'score',     template: 'Набери {n} очков',           targets: [500, 1000, 1500, 2000, 3000], reward: 5,  icon: '🎯' },
+    { type: 'combo',     template: 'Сделай комбо x3+ {n} раз',   targets: [2, 3, 5, 7],                   reward: 8,  icon: '🔥' },
+    { type: 'matches',   template: 'Сделай {n} совпадений',      targets: [20, 30, 40, 50],               reward: 5,  icon: '🧩' },
+    { type: 'bombs',     template: 'Создай {n} бомб',            targets: [2, 3, 5],                      reward: 10, icon: '💣' },
+    { type: 'rainbows',  template: 'Создай {n} радуг',           targets: [1, 2, 3],                      reward: 12, icon: '🌈' },
+    { type: 'playtime',  template: 'Играй {n} минут',            targets: [5, 10, 15],                    reward: 3,  icon: '⏱️' }
+];
+
 // ===== BOOSTERS & DIAMONDS =====
 const BOOSTER_DEFS = {
     hammer: { name: 'Молоток', icon: '🔨', price: 10 },
@@ -163,6 +184,68 @@ function playSoundMatch() {
     tone(659, 0.15, 'sine', 0.5, 0.07);
     tone(784, 0.18, 'sine', 0.5, 0.14);
 }
+
+// ===== PLAYER COMBO SYSTEM =====
+function playComboTone(level) {
+    if (!audioCtx || !soundEnabled) return;
+    const baseFreqs = [523, 587, 659, 698, 784, 880, 988, 1047, 1175, 1319];
+    const freq = baseFreqs[Math.min(level - 1, baseFreqs.length - 1)];
+    tone(freq, 0.22, 'sine', 0.45);
+    if (level >= 3) {
+        gliss(freq * 0.8, freq * 1.3, 0.18, 'sine', 0.3);
+    }
+    if (level >= 5) {
+        tone(freq * 1.5, 0.15, 'triangle', 0.2, 0.08);
+    }
+}
+
+function onPlayerMatch() {
+    const now = Date.now();
+    if (now - lastPlayerMatchTime < COMBO_TIMEOUT && lastPlayerMatchTime > 0) {
+        playerCombo++;
+    } else {
+        playerCombo = 1;
+    }
+    lastPlayerMatchTime = now;
+    totalCombosThisGame++;
+    if (playerCombo > bestComboThisGame) bestComboThisGame = playerCombo;
+    if (playerCombo > 1) {
+        showPlayerCombo(playerCombo);
+        playComboTone(playerCombo);
+        spawnComboParticles(playerCombo);
+        if (playerCombo >= 3) {
+            comboHitsThisGame++;
+        }
+    }
+    resetComboTimer();
+}
+
+function resetComboTimer() {
+    if (comboResetTimer) clearTimeout(comboResetTimer);
+    comboResetTimer = setTimeout(() => {
+        playerCombo = 0;
+    }, COMBO_TIMEOUT);
+}
+
+function showPlayerCombo(level) {
+    const old = gameBoard.querySelector('.player-combo');
+    if (old) old.remove();
+
+    const el = document.createElement('div');
+    el.className = 'player-combo';
+
+    const color = COMBO_COLORS[Math.min(level - 2, COMBO_COLORS.length - 1)];
+    const scale = Math.min(1 + level * 0.12, 2.2);
+    const fontSize = Math.min(20 + level * 6, 52);
+
+    el.innerHTML = `<span class="pc-text">COMBO</span><span class="pc-level" style="color:${color};font-size:${fontSize}px;">x${level}</span>`;
+    el.style.transform = `translate(-50%, -50%) scale(${scale})`;
+
+    gameBoard.appendChild(el);
+    setTimeout(() => el.remove(), 1600);
+}
+
+// Legacy combo indicator (for cascade combos in processMatches)
 function playSoundCombo(mult) {
     gliss(400, 800, 0.3, 'square', 0.35);
     tone(880 * mult, 0.25, 'sine', 0.5);
@@ -200,6 +283,21 @@ let activeBooster = null;
 let swapBoostPick = null;
 let storeSelectedBooster = null;
 let diamondsAwardedForScore = 0;
+
+// ===== PLAYER COMBO (5-second window) =====
+let playerCombo = 0;
+let lastPlayerMatchTime = 0;
+const COMBO_TIMEOUT = 5000;
+let comboResetTimer = null;
+let bestComboThisGame = 0;
+let totalCombosThisGame = 0;
+
+// ===== DAILY STATS (this-game counters) =====
+let gamesPlayedThisSession = 0;
+let matchesThisGame = 0;
+let bombsCreatedThisGame = 0;
+let rainbowsCreatedThisGame = 0;
+let comboHitsThisGame = 0;
 
 // ===== TIMER STATE =====
 const GAME_DURATION = 20 * 60; // 20 минут в секундах
@@ -268,6 +366,9 @@ const pauseRestartBtn = document.getElementById('pause-restart-btn');
 const helpBtn = document.getElementById('help-btn');
 const helpModal = document.getElementById('help-modal');
 const helpCloseBtn = document.getElementById('help-close-btn');
+const statsBtn = document.getElementById('stats-btn');
+const tasksBtn = document.getElementById('tasks-btn');
+const dailyTasksCount = document.getElementById('daily-tasks-count');
 
 // ===== VK STORAGE / PLAYER =====
 function getSoundSetting(defaultVal) {
@@ -417,11 +518,22 @@ function endGameByTime() {
     stopGameTimer();
     gameOverShown = true;
     isPaused = false;
+
+    const playTime = GAME_DURATION;
+    recordGameEnd(score, playTime);
+    trackTaskProgress('score', score);
+    trackTaskProgress('bombs', bombsCreatedThisGame);
+    trackTaskProgress('rainbows', rainbowsCreatedThisGame);
+    trackTaskProgress('matches', matchesThisGame);
+    trackTaskProgress('combo', comboHitsThisGame);
+    trackTaskProgress('playtime', Math.floor(playTime / 60));
+
     clearSavedGame();
     finalScore.textContent = score;
     modalBestScore.textContent = bestScore;
     gameOverModal.classList.add('active');
     pauseModal.classList.remove('active');
+    updateDailyTasksBadge();
 }
 
 // ===== AUTOSAVE (полное состояние игры) =====
@@ -521,11 +633,432 @@ function showFullscreenAd() {
     });
 }
 
+// ===== PARTICLE SYSTEM =====
+function spawnParticles(row, col, color, count, speed, sizeRange) {
+    const cell = matrixCells[row] && matrixCells[row][col];
+    if (!cell) return;
+    const rect = cell.getBoundingClientRect();
+    const boardRect = gameBoard.getBoundingClientRect();
+    const cx = rect.left - boardRect.left + rect.width / 2;
+    const cy = rect.top - boardRect.top + rect.height / 2;
+    for (let i = 0; i < count; i++) {
+        const p = document.createElement('div');
+        p.className = 'game-particle';
+        const angle = (360 / count) * i + (Math.random() * 30 - 15);
+        const dist = speed + Math.random() * speed * 0.6;
+        const sz = sizeRange[0] + Math.random() * (sizeRange[1] - sizeRange[0]);
+        p.style.left = cx + 'px';
+        p.style.top = cy + 'px';
+        p.style.width = sz + 'px';
+        p.style.height = sz + 'px';
+        p.style.background = color;
+        p.style.setProperty('--px', Math.cos(angle * Math.PI / 180) * dist + 'px');
+        p.style.setProperty('--py', Math.sin(angle * Math.PI / 180) * dist + 'px');
+        gameBoard.appendChild(p);
+        setTimeout(() => p.remove(), 650);
+    }
+}
+
+function spawnMatchParticles(row, col, fruitType) {
+    const color = FRUIT_COLORS[fruitType] || '#FF6B6B';
+    spawnParticles(row, col, color, 6, 25, [4, 8]);
+}
+
+function spawnBombParticles(row, col) {
+    const colors = ['#FF6B6B', '#FFB347', '#FF8E53', '#FFE66D', '#E74C3C'];
+    for (let i = 0; i < 15; i++) {
+        const c = colors[Math.floor(Math.random() * colors.length)];
+        spawnParticles(row, col, c, 1, 45, [5, 10]);
+    }
+}
+
+function spawnRainbowParticles(row, col) {
+    const colors = ['#FF6B6B', '#FFE66D', '#4ECDC4', '#667eea', '#764ba2', '#2ECC71', '#FF6B9D'];
+    for (let i = 0; i < 20; i++) {
+        const c = colors[Math.floor(Math.random() * colors.length)];
+        spawnParticles(row, col, c, 1, 35, [3, 7]);
+    }
+}
+
+function spawnComboParticles(level) {
+    const boardRect = gameBoard.getBoundingClientRect();
+    const cx = boardRect.width / 2;
+    const cy = boardRect.height / 2;
+    const colors = ['#FFE66D', '#FFB347', '#27AE60', '#667eea', '#FF6B6B'];
+    const count = Math.min(4 + level * 2, 20);
+    for (let i = 0; i < count; i++) {
+        const p = document.createElement('div');
+        p.className = 'game-particle combo-particle';
+        const angle = (360 / count) * i;
+        const dist = 30 + level * 10 + Math.random() * 20;
+        const c = colors[Math.floor(Math.random() * colors.length)];
+        const sz = 4 + Math.random() * 5;
+        p.style.left = cx + 'px';
+        p.style.top = cy + 'px';
+        p.style.width = sz + 'px';
+        p.style.height = sz + 'px';
+        p.style.background = c;
+        p.style.setProperty('--px', Math.cos(angle * Math.PI / 180) * dist + 'px');
+        p.style.setProperty('--py', Math.sin(angle * Math.PI / 180) * dist + 'px');
+        gameBoard.appendChild(p);
+        setTimeout(() => p.remove(), 700);
+    }
+}
+
+// ===== TUTORIAL SYSTEM =====
+function hasTutorialDone() {
+    return localStorage.getItem('fruitBlastTutorialDone') === '1';
+}
+
+function showTutorial() {
+    if (hasTutorialDone()) return;
+    if (!gameStarted || gameOverShown) return;
+    const validMove = findTutorialMove();
+    if (!validMove) { completeTutorial(); return; }
+    isPaused = true;
+    stopGameTimer();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'tutorial-overlay';
+    overlay.innerHTML = `
+        <div class="tutorial-backdrop"></div>
+        <div class="tutorial-spotlight" id="tutorial-spotlight"></div>
+        <div class="tutorial-text" id="tutorial-text"></div>
+        <div class="tutorial-arrow" id="tutorial-arrow"></div>
+        <button class="tutorial-btn" id="tutorial-skip-btn">Пропустить</button>
+        <button class="tutorial-btn tutorial-next" id="tutorial-next-btn">Далее</button>
+    `;
+    gameBoard.appendChild(overlay);
+    document.getElementById('tutorial-skip-btn').addEventListener('click', completeTutorial);
+    document.getElementById('tutorial-next-btn').addEventListener('click', tutorialNextStep);
+
+    tutorialCurrentStep = 0;
+    tutorialMove = validMove;
+    tutorialShowStep(0);
+}
+
+let tutorialCurrentStep = 0;
+let tutorialMove = null;
+
+function tutorialShowStep(step) {
+    const spotlight = document.getElementById('tutorial-spotlight');
+    const text = document.getElementById('tutorial-text');
+    const arrow = document.getElementById('tutorial-arrow');
+    const nextBtn = document.getElementById('tutorial-next-btn');
+    if (!spotlight || !text) return;
+
+    spotlight.className = 'tutorial-spotlight';
+    arrow.className = 'tutorial-arrow';
+    arrow.style.display = 'none';
+
+    if (step === 0) {
+        const cell = matrixCells[tutorialMove.from.row][tutorialMove.from.col];
+        positionSpotlight(spotlight, cell);
+        text.textContent = 'Выбери этот фрукт';
+        text.className = 'tutorial-text';
+        nextBtn.textContent = 'Далее';
+    } else if (step === 1) {
+        const cell = matrixCells[tutorialMove.from.row][tutorialMove.from.col];
+        positionSpotlight(spotlight, cell);
+        positionArrow(arrow, tutorialMove.from, tutorialMove.to);
+        arrow.style.display = 'block';
+        text.textContent = 'Поменяй его местами с этим';
+        text.className = 'tutorial-text';
+        nextBtn.textContent = 'Понял!';
+    } else {
+        completeTutorial();
+        return;
+    }
+    tutorialCurrentStep = step;
+}
+
+function tutorialNextStep() {
+    tutorialShowStep(tutorialCurrentStep + 1);
+}
+
+function positionSpotlight(spotlight, cellEl) {
+    const rect = cellEl.getBoundingClientRect();
+    const boardRect = gameBoard.getBoundingClientRect();
+    spotlight.style.left = (rect.left - boardRect.left + rect.width / 2) + 'px';
+    spotlight.style.top = (rect.top - boardRect.top + rect.height / 2) + 'px';
+    spotlight.style.width = rect.width + 'px';
+    spotlight.style.height = rect.height + 'px';
+    spotlight.classList.add('visible');
+}
+
+function positionArrow(arrow, from, to) {
+    const fromCell = matrixCells[from.row][from.col];
+    const toCell = matrixCells[to.row][to.col];
+    const fromRect = fromCell.getBoundingClientRect();
+    const toRect = toCell.getBoundingClientRect();
+    const boardRect = gameBoard.getBoundingClientRect();
+    const fx = fromRect.left - boardRect.left + fromRect.width / 2;
+    const fy = fromRect.top - boardRect.top + fromRect.height / 2;
+    const tx = toRect.left - boardRect.left + toRect.width / 2;
+    const ty = toRect.top - boardRect.top + toRect.height / 2;
+    const angle = Math.atan2(ty - fy, tx - fx) * 180 / Math.PI;
+    arrow.style.left = fx + 'px';
+    arrow.style.top = fy + 'px';
+    arrow.style.setProperty('--arrow-angle', angle + 'deg');
+}
+
+function findTutorialMove() {
+    for (let row = 0; row < BOARD_SIZE; row++) {
+        for (let col = 0; col < BOARD_SIZE; col++) {
+            if (col < BOARD_SIZE - 1) {
+                swapTemp(row, col, row, col + 1);
+                if (findMatches().length > 0) {
+                    swapTemp(row, col, row, col + 1);
+                    return { from: { row, col }, to: { row, col: col + 1 } };
+                }
+                swapTemp(row, col, row, col + 1);
+            }
+            if (row < BOARD_SIZE - 1) {
+                swapTemp(row, col, row + 1, col);
+                if (findMatches().length > 0) {
+                    swapTemp(row, col, row + 1, col);
+                    return { from: { row, col }, to: { row: row + 1, col } };
+                }
+                swapTemp(row, col, row + 1, col);
+            }
+        }
+    }
+    return null;
+}
+
+function completeTutorial() {
+    const overlay = document.getElementById('tutorial-overlay');
+    if (overlay) overlay.remove();
+    localStorage.setItem('fruitBlastTutorialDone', '1');
+    isPaused = false;
+    updateTimerDisplay();
+    startGameTimer();
+}
+
+// ===== STATISTICS =====
+let gameStats = {
+    gamesPlayed: 0,
+    totalScore: 0,
+    bestScore: 0,
+    bestCombo: 0,
+    totalCombos: 0,
+    bombsCreated: 0,
+    rainbowsCreated: 0,
+    totalMatches: 0,
+    totalPlayTimeSec: 0
+};
+
+function loadStats() {
+    try {
+        const raw = localStorage.getItem('fruitBlastStats');
+        if (raw) Object.assign(gameStats, JSON.parse(raw));
+    } catch (e) {}
+}
+
+function saveStats() {
+    try {
+        localStorage.setItem('fruitBlastStats', JSON.stringify(gameStats));
+    } catch (e) {}
+    vkStorageSet('fruitBlastStats', JSON.stringify(gameStats));
+}
+
+function recordGameEnd(finalScore, playTimeSec) {
+    gameStats.gamesPlayed++;
+    gameStats.totalScore += finalScore;
+    if (finalScore > gameStats.bestScore) gameStats.bestScore = finalScore;
+    if (bestComboThisGame > gameStats.bestCombo) gameStats.bestCombo = bestComboThisGame;
+    gameStats.totalCombos += totalCombosThisGame;
+    gameStats.bombsCreated += bombsCreatedThisGame;
+    gameStats.rainbowsCreated += rainbowsCreatedThisGame;
+    gameStats.totalMatches += matchesThisGame;
+    gameStats.totalPlayTimeSec += playTimeSec;
+    saveStats();
+}
+
+function formatPlayTimeSec(sec) {
+    sec = Math.floor(sec);
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    if (h > 0) return h + 'ч ' + m + 'м';
+    return m + 'м';
+}
+
+function showStatsModal() {
+    const existing = document.getElementById('stats-modal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.className = 'stats-modal active';
+    modal.id = 'stats-modal';
+
+    const stats = [
+        { icon: '🎮', value: gameStats.gamesPlayed,  label: 'Игр сыграно' },
+        { icon: '🏆', value: gameStats.bestScore,     label: 'Лучший счёт' },
+        { icon: '📊', value: Math.floor(gameStats.totalScore / Math.max(gameStats.gamesPlayed, 1)), label: 'Средний счёт' },
+        { icon: '🔥', value: 'x' + gameStats.bestCombo, label: 'Лучшее комбо' },
+        { icon: '⚡', value: gameStats.totalCombos,   label: 'Всего комбо' },
+        { icon: '🧩', value: gameStats.totalMatches,  label: 'Всего совпадений' },
+        { icon: '💣', value: gameStats.bombsCreated,  label: 'Бомб создано' },
+        { icon: '🌈', value: gameStats.rainbowsCreated, label: 'Радуг создано' },
+        { icon: '⏱️', value: formatPlayTimeSec(gameStats.totalPlayTimeSec), label: 'Общее время' }
+    ];
+
+    let cardsHtml = stats.map(s =>
+        `<div class="stat-card"><div class="stat-icon">${s.icon}</div><div class="stat-value">${s.value}</div><div class="stat-label">${s.label}</div></div>`
+    ).join('');
+
+    modal.innerHTML = `
+        <div class="modal-content stats-content">
+            <h2 class="modal-title">СТАТИСТИКА</h2>
+            <div class="stats-grid">${cardsHtml}</div>
+            <button class="play-again-btn" id="stats-close-btn">ЗАКРЫТЬ</button>
+        </div>
+    `;
+    gameBoard.parentElement.appendChild(modal);
+    document.getElementById('stats-close-btn').addEventListener('click', () => modal.remove());
+}
+
+// ===== DAILY TASKS =====
+let dailyTasks = [];
+let dailyTasksDate = '';
+
+function loadDailyTasks() {
+    const today = new Date().toISOString().slice(0, 10);
+    dailyTasksDate = today;
+    try {
+        const raw = localStorage.getItem('fruitBlastDailyTasks');
+        if (raw) {
+            const data = JSON.parse(raw);
+            if (data.date === today) {
+                dailyTasks = data.tasks;
+                return;
+            }
+        }
+    } catch (e) {}
+    generateDailyTasks();
+}
+
+function generateDailyTasks() {
+    const today = new Date().toISOString().slice(0, 10);
+    dailyTasksDate = today;
+    const shuffled = [...DAILY_TASK_DEFS].sort(() => Math.random() - 0.5);
+    dailyTasks = shuffled.slice(0, 3).map((def, i) => {
+        const target = def.targets[Math.floor(Math.random() * def.targets.length)];
+        return {
+            id: i,
+            type: def.type,
+            template: def.template,
+            icon: def.icon,
+            target: target,
+            progress: 0,
+            reward: def.reward,
+            completed: false,
+            claimed: false,
+            name: def.template.replace('{n}', target)
+        };
+    });
+    saveDailyTasks();
+}
+
+function saveDailyTasks() {
+    try {
+        localStorage.setItem('fruitBlastDailyTasks', JSON.stringify({ date: dailyTasksDate, tasks: dailyTasks }));
+    } catch (e) {}
+    updateDailyTasksBadge();
+}
+
+function trackTaskProgress(type, amount) {
+    let changed = false;
+    dailyTasks.forEach(task => {
+        if (task.type === type && !task.claimed) {
+            task.progress = Math.min(task.progress + amount, task.target);
+            if (task.progress >= task.target && !task.completed) {
+                task.completed = true;
+                changed = true;
+            }
+        }
+    });
+    if (changed) saveDailyTasks();
+}
+
+function claimTaskReward(taskId) {
+    const task = dailyTasks.find(t => t.id === taskId);
+    if (!task || !task.completed || task.claimed) return;
+    task.claimed = true;
+    addDiamonds(task.reward);
+    saveDailyTasks();
+    showMessage('+' + task.reward + ' 💎');
+    showTasksModal();
+}
+
+function updateDailyTasksBadge() {
+    const unclaimed = dailyTasks.filter(t => t.completed && !t.claimed).length;
+    if (dailyTasksCount) {
+        dailyTasksCount.textContent = unclaimed;
+        dailyTasksCount.style.display = unclaimed > 0 ? 'flex' : 'none';
+    }
+}
+
+function showTasksModal() {
+    const existing = document.getElementById('tasks-modal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.className = 'tasks-modal active';
+    modal.id = 'tasks-modal';
+
+    let tasksHtml = dailyTasks.map(task => {
+        const pct = Math.min(100, Math.round((task.progress / task.target) * 100));
+        let actionHtml = '';
+        if (task.claimed) {
+            actionHtml = '<div class="task-claimed">✅ Получено</div>';
+        } else if (task.completed) {
+            actionHtml = `<button class="task-claim-btn" data-task-id="${task.id}">💎 ЗАБРАТЬ ${task.reward}</button>`;
+        } else {
+            actionHtml = `<div class="task-progress-text">${task.progress}/${task.target}</div>`;
+        }
+        return `
+            <div class="task-card ${task.completed && !task.claimed ? 'task-ready' : ''} ${task.claimed ? 'task-done' : ''}">
+                <div class="task-header">
+                    <span class="task-icon">${task.icon}</span>
+                    <span class="task-name">${task.name}</span>
+                </div>
+                <div class="task-bar"><div class="task-bar-fill" style="width:${pct}%"></div></div>
+                ${actionHtml}
+            </div>
+        `;
+    }).join('');
+
+    modal.innerHTML = `
+        <div class="modal-content tasks-content">
+            <h2 class="modal-title">ЕЖЕДНЕВНЫЕ ЗАДАНИЯ</h2>
+            <div class="tasks-list">${tasksHtml}</div>
+            <button class="play-again-btn" id="tasks-close-btn">ЗАКРЫТЬ</button>
+        </div>
+    `;
+    gameBoard.parentElement.appendChild(modal);
+
+    document.getElementById('tasks-close-btn').addEventListener('click', () => modal.remove());
+    modal.querySelectorAll('.task-claim-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            claimTaskReward(parseInt(btn.dataset.taskId));
+        });
+    });
+}
+
 // ===== BOARD LOGIC =====
 function initGame() {
     board = [];
     score = 0;
     comboCount = 0;
+    playerCombo = 0;
+    lastPlayerMatchTime = 0;
+    bestComboThisGame = 0;
+    totalCombosThisGame = 0;
+    matchesThisGame = 0;
+    bombsCreatedThisGame = 0;
+    rainbowsCreatedThisGame = 0;
     selectedCell = null;
     isProcessing = false;
     isPaused = false;
@@ -551,6 +1084,8 @@ function initGame() {
     leaderboardModal.classList.remove('active');
     pauseModal.classList.remove('active');
     startGameTimer();
+
+    setTimeout(() => showTutorial(), 600);
 }
 
 function createBoard() {
@@ -767,6 +1302,7 @@ async function swapFruits(cell1, cell2) {
             updateScoreDisplay();
             for (let r = 0; r < BOARD_SIZE; r++) {
                 for (let c = 0; c < BOARD_SIZE; c++) {
+                    if (board[r][c]) spawnRainbowParticles(r, c);
                     board[r][c] = null;
                 }
             }
@@ -785,11 +1321,14 @@ async function swapFruits(cell1, cell2) {
                 for (let c = 0; c < BOARD_SIZE; c++) {
                     if (partnerIsBomb) {
                         board[r][c] = null;
+                        spawnBombParticles(r, c);
                     } else if (board[r][c] && board[r][c].type === partnerType && board[r][c].bonus !== 'rainbow') {
                         board[r][c] = null;
+                        spawnMatchParticles(r, c, partnerType);
                     }
                 }
             }
+            spawnRainbowParticles(rainbowPos.row, rainbowPos.col);
             board[rainbowPos.row][rainbowPos.col] = null;
             if (partnerIsBomb) {
                 showMessage('Радуга + Бомба! 💥');
@@ -808,6 +1347,8 @@ async function swapFruits(cell1, cell2) {
     if (matches.length > 0) {
         comboCount = 0;
         await processMatches();
+        onPlayerMatch();
+        matchesThisGame += matches.length;
     } else if (!rainbowActivated) {
         playSoundInvalid();
         flashInvalidCells(cell1, cell2);
@@ -913,11 +1454,13 @@ async function processMatches() {
                 const bombType = board[centerCell.row][centerCell.col].type;
                 board[centerCell.row][centerCell.col] = { type: bombType, bonus: 'bomb' };
                 createdBonus = 'bomb';
+                bombsCreatedThisGame++;
                 addDiamonds(1);
             } else if (matchLength >= 5) {
                 baseScore = 100;
                 board[centerCell.row][centerCell.col] = { type: 'rainbow', bonus: 'rainbow' };
                 createdBonus = 'rainbow';
+                rainbowsCreatedThisGame++;
                 addDiamonds(2);
             }
 
@@ -926,6 +1469,7 @@ async function processMatches() {
             for (const cell of match.cells) {
                 if (matchLength < 4 || cell.row !== centerCell.row || cell.col !== centerCell.col) {
                     allMatchedCells.add(`${cell.row},${cell.col}`);
+                    spawnMatchParticles(cell.row, cell.col, board[cell.row] && board[cell.row][cell.col] && board[cell.row][cell.col].type);
                 }
             }
 
@@ -970,6 +1514,7 @@ async function processMatches() {
                         }
                     }
                 }
+                spawnBombParticles(bonusCell.row, bonusCell.col);
                 score += 20;
                 playSoundBomb();
             } else if (bonusCell.bonus === 'rainbow') {
@@ -978,9 +1523,11 @@ async function processMatches() {
                     for (let c = 0; c < BOARD_SIZE; c++) {
                         if (board[r][c] && board[r][c].type === targetType && !board[r][c].bonus) {
                             allMatchedCells.add(`${r},${c}`);
+                            spawnMatchParticles(r, c, targetType);
                         }
                     }
                 }
+                spawnRainbowParticles(bonusCell.row, bonusCell.col);
                 score += 50;
                 playSoundRainbow();
             }
@@ -1608,6 +2155,15 @@ leaderboardBtn.addEventListener('click', showLeaderboard);
 leaderboardCloseBtn.addEventListener('click', () => leaderboardModal.classList.remove('active'));
 leaderboardResultsBtn.addEventListener('click', showLeaderboard);
 
+if (statsBtn) statsBtn.addEventListener('click', () => {
+    cancelActiveBooster();
+    showStatsModal();
+});
+if (tasksBtn) tasksBtn.addEventListener('click', () => {
+    cancelActiveBooster();
+    showTasksModal();
+});
+
 storeBtn.addEventListener('click', openStore);
 storeCloseBtn.addEventListener('click', closeStore);
 boostPanel.addEventListener('click', (e) => {
@@ -1692,6 +2248,10 @@ async function boot() {
     // иначе в шапке/магазине висит "💎 0" до первого открытия магазина.
     updateDiamondUI();
     updateBoostPanel();
+
+    loadStats();
+    loadDailyTasks();
+    updateDailyTasksBadge();
 
     // Есть ли незавершённая игра (таймер остановлен, сохранено состояние)?
     const pending = loadSavedGame();
