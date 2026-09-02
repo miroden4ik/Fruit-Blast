@@ -783,7 +783,7 @@ function showTutorial() {
         <button class="tutorial-btn" id="tutorial-skip-btn" style="pointer-events:auto;position:absolute;right:16px;top:16px;background:#fff;color:#555;border:none;padding:8px 14px;border-radius:10px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.15);">Пропустить</button>
         <button class="tutorial-btn tutorial-next" id="tutorial-next-btn" style="pointer-events:auto;position:absolute;left:50%;transform:translateX(-50%);bottom:36px;background:linear-gradient(135deg,#FF6B6B,#FFB347);color:#fff;border:none;padding:12px 28px;border-radius:14px;font-weight:800;cursor:pointer;box-shadow:0 6px 18px rgba(255,107,107,0.4);font-size:15px;">Далее</button>
     `;
-    gameContainer.appendChild(overlay);
+    document.body.appendChild(overlay);
     document.getElementById('tutorial-skip-btn').addEventListener('click', completeTutorial);
     document.getElementById('tutorial-next-btn').addEventListener('click', tutorialNextStep);
 
@@ -994,7 +994,7 @@ function showProfileModal() {
             <button class="play-again-btn" id="profile-close-btn">ЗАКРЫТЬ</button>
         </div>
     `;
-    gameBoard.parentElement.appendChild(modal);
+    document.body.appendChild(modal);
     document.getElementById('profile-close-btn').addEventListener('click', () => modal.remove());
     modal.addEventListener('click', (e) => {
         if (e.target === modal) modal.remove();
@@ -1008,17 +1008,31 @@ let dailyTasksDate = '';
 function loadDailyTasks() {
     const today = new Date().toISOString().slice(0, 10);
     dailyTasksDate = today;
+    const loadFromData = (data) => {
+        if (data && data.date === today && Array.isArray(data.tasks)) {
+            dailyTasks = data.tasks;
+            return true;
+        }
+        return false;
+    };
     try {
         const raw = localStorage.getItem('fruitBlastDailyTasks');
-        if (raw) {
-            const data = JSON.parse(raw);
-            if (data.date === today) {
-                dailyTasks = data.tasks;
-                return;
-            }
+        if (raw && loadFromData(JSON.parse(raw))) {
+            vkStorageGet('fruitBlastDailyTasks').then(v => {
+                if (v) { try { loadFromData(JSON.parse(v)); } catch (e) {} }
+            }).catch(() => {});
+            return;
         }
     } catch (e) {}
-    generateDailyTasks();
+    vkStorageGet('fruitBlastDailyTasks').then(v => {
+        if (v) {
+            try {
+                const data = JSON.parse(v);
+                if (loadFromData(data)) return;
+            } catch (e) {}
+        }
+        generateDailyTasks();
+    }).catch(() => generateDailyTasks());
 }
 
 function generateDailyTasks() {
@@ -1044,9 +1058,11 @@ function generateDailyTasks() {
 }
 
 function saveDailyTasks() {
+    const payload = JSON.stringify({ date: dailyTasksDate, tasks: dailyTasks });
     try {
-        localStorage.setItem('fruitBlastDailyTasks', JSON.stringify({ date: dailyTasksDate, tasks: dailyTasks }));
+        localStorage.setItem('fruitBlastDailyTasks', payload);
     } catch (e) {}
+    vkStorageSet('fruitBlastDailyTasks', payload);
     updateDailyTasksBadge();
 }
 
@@ -1054,7 +1070,9 @@ function trackTaskProgress(type, amount) {
     let changed = false;
     dailyTasks.forEach(task => {
         if (task.type === type && !task.claimed) {
+            const before = task.progress;
             task.progress = Math.min(task.progress + amount, task.target);
+            if (task.progress > before) changed = true;
             if (task.progress >= task.target && !task.completed) {
                 task.completed = true;
                 changed = true;
@@ -1119,7 +1137,7 @@ function showTasksModal() {
             <button class="play-again-btn" id="tasks-close-btn">ЗАКРЫТЬ</button>
         </div>
     `;
-    gameBoard.parentElement.appendChild(modal);
+    document.body.appendChild(modal);
 
     document.getElementById('tasks-close-btn').addEventListener('click', () => modal.remove());
     modal.querySelectorAll('.task-claim-btn').forEach(btn => {
@@ -1178,7 +1196,6 @@ function initGame() {
 
     setTimeout(() => showTutorial(), 600);
 }
-
 function createBoard() {
     board = [];
     for (let row = 0; row < BOARD_SIZE; row++) {
