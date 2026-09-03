@@ -668,6 +668,7 @@ let activeBooster = null;
 let swapBoostPick = null;
 let storeSelectedBooster = null;
 let diamondsAwardedForScore = 0;
+let diamondsEarnedThisGame = 0;
 
 // ===== PLAYER COMBO (5-second window) =====
 let playerCombo = 0;
@@ -683,6 +684,7 @@ let matchesThisGame = 0;
 let bombsCreatedThisGame = 0;
 let rainbowsCreatedThisGame = 0;
 let comboHitsThisGame = 0;
+let newRecordThisGame = false;
 
 // ===== TIMER STATE =====
 const GAME_DURATION = 20 * 60; // 20 минут в секундах
@@ -700,6 +702,11 @@ const bestScoreDisplay = document.getElementById('best-score');
 const gameOverModal = document.getElementById('game-over-modal');
 const finalScore = document.getElementById('final-score');
 const modalBestScore = document.getElementById('modal-best-score');
+const modalRecordBadge = document.getElementById('modal-record-badge');
+const statDiamonds = document.getElementById('stat-diamonds');
+const statCombo = document.getElementById('stat-combo');
+const statMatches = document.getElementById('stat-matches');
+const statBombs = document.getElementById('stat-bombs');
 const shareGameoverBtn = document.getElementById('share-gameover-btn');
 const pauseModal = document.getElementById('pause-modal');
 const leaderboardModal = document.getElementById('leaderboard-modal');
@@ -820,6 +827,7 @@ function flushAllSaves() {
 function addDiamonds(n) {
     diamonds += n;
     if (diamonds < 0) diamonds = 0;
+    if (n > 0 && gameStarted && !gameOverShown) diamondsEarnedThisGame += n;
     updateDiamondUI();
     persistUserData();
 }
@@ -927,6 +935,11 @@ function endGameByTime() {
     clearSavedGame();
     finalScore.textContent = score;
     modalBestScore.textContent = bestScore;
+    modalRecordBadge.style.display = newRecordThisGame ? 'block' : 'none';
+    statDiamonds.textContent = '💎 ' + diamondsEarnedThisGame;
+    statCombo.textContent = 'x' + bestComboThisGame;
+    statMatches.textContent = matchesThisGame;
+    statBombs.textContent = bombsCreatedThisGame;
     gameOverModal.classList.add('active');
     pauseModal.classList.remove('active');
     updateDailyTasksBadge();
@@ -1624,6 +1637,7 @@ function initGame() {
     bombsCreatedThisGame = 0;
     rainbowsCreatedThisGame = 0;
     comboHitsThisGame = 0;
+    newRecordThisGame = false;
     selectedCell = null;
     isProcessing = false;
     isPaused = false;
@@ -1631,6 +1645,7 @@ function initGame() {
     activeBooster = null;
     swapBoostPick = null;
     diamondsAwardedForScore = 0;
+    diamondsEarnedThisGame = 0;
     timeLeft = GAME_DURATION;
     clearSavedGame();
 
@@ -2118,7 +2133,7 @@ async function processMatches() {
             }
         });
 
-        await sleep(300);
+        await sleep(160);
 
         allMatchedCells.forEach(key => {
             const [row, col] = key.split(',').map(Number);
@@ -2129,7 +2144,7 @@ async function processMatches() {
         await fillEmptySpaces();
 
         renderBoard();
-        await sleep(150);
+        await sleep(80);
 
         matches = findMatches();
     }
@@ -2160,18 +2175,18 @@ async function dropFruits() {
             const cell = matrixCells[drop.toRow][drop.col];
             if (cell && cell.querySelector('.fruit')) {
                 const distance = (drop.fromRow - drop.toRow) * 100;
-                cell.querySelector('.fruit').style.transition = 'transform 0.3s ease-out';
+                cell.querySelector('.fruit').style.transition = 'transform 0.22s ease-out';
                 cell.querySelector('.fruit').style.transform = `translateY(-${distance}%)`;
             }
         }
-        await sleep(30);
+        await sleep(15);
         for (const drop of drops) {
             const cell = matrixCells[drop.toRow][drop.col];
             if (cell && cell.querySelector('.fruit')) {
                 cell.querySelector('.fruit').style.transform = 'translateY(0)';
             }
         }
-        await sleep(300);
+        await sleep(200);
     }
 }
 
@@ -2192,18 +2207,18 @@ async function fillEmptySpaces() {
         for (const fruit of newFruits) {
             const cell = matrixCells[fruit.row][fruit.col];
             if (cell && cell.querySelector('.fruit')) {
-                cell.querySelector('.fruit').style.transition = 'transform 0.4s ease-out';
+                cell.querySelector('.fruit').style.transition = 'transform 0.3s ease-out';
                 cell.querySelector('.fruit').style.transform = 'translateY(-300%)';
             }
         }
-        await sleep(30);
+        await sleep(15);
         for (const fruit of newFruits) {
             const cell = matrixCells[fruit.row][fruit.col];
             if (cell && cell.querySelector('.fruit')) {
                 cell.querySelector('.fruit').style.transform = 'translateY(0)';
             }
         }
-        await sleep(400);
+        await sleep(250);
     }
 }
 
@@ -2305,6 +2320,7 @@ function updateScoreDisplay() {
     if (score > bestScore && bestScoreLoaded) {
         const prevBest = bestScore;
         bestScore = score;
+        newRecordThisGame = true;
         persistBestScore();
         submitLeaderboard();
         bestScoreDisplay.textContent = bestScore;

@@ -15,6 +15,9 @@ export default {
       if (path === '/submit' && method === 'POST') {
         return handleCors(await submitScore(request, env));
       }
+      if (path === '/delete' && method === 'POST') {
+        return handleCors(await deleteUser(request, env));
+      }
       return handleCors(new Response(JSON.stringify({ error: 'Not found' }), {
         status: 404,
         headers: { 'Content-Type': 'application/json' },
@@ -187,6 +190,33 @@ async function submitScore(request, env) {
     new_score: score,
     record,
   }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+async function deleteUser(request, env) {
+  const kv = env.FRUIT_BLAST_LB;
+  let payload;
+  try {
+    payload = await request.json();
+  } catch {
+    return new Response(JSON.stringify({ success: false, error: 'Invalid JSON' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+  const { vk_user_id } = payload || {};
+  if (!vk_user_id) {
+    return new Response(JSON.stringify({ success: false, error: 'Missing vk_user_id' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+  const userKey = `user:${vk_user_id}`;
+  await kv.delete(userKey);
+  await kv.delete('_index');
+  return new Response(JSON.stringify({ success: true, deleted: vk_user_id }), {
     status: 200,
     headers: { 'Content-Type': 'application/json' },
   });

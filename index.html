@@ -113,6 +113,7 @@
         <div class="game-over-modal" id="game-over-modal">
             <div class="modal-content">
                 <h2 class="modal-title">ВРЕМЯ ВЫШЛО!</h2>
+                <div class="modal-record" id="modal-record-badge" style="display:none">🎉 Новый рекорд!</div>
                 <div class="modal-score">
                     <div class="modal-score-label">Ваш результат</div>
                     <div class="modal-score-value" id="final-score">0</div>
@@ -120,6 +121,12 @@
                 <div class="modal-best">
                     <div class="modal-best-label">Лучший результат</div>
                     <div class="modal-best-value" id="modal-best-score">0</div>
+                </div>
+                <div class="modal-stats" id="modal-stats">
+                    <div class="modal-stat"><div class="modal-stat-value" id="stat-diamonds">💎 0</div><div class="modal-stat-label">алмазов</div></div>
+                    <div class="modal-stat"><div class="modal-stat-value" id="stat-combo">x0</div><div class="modal-stat-label">макс. комбо</div></div>
+                    <div class="modal-stat"><div class="modal-stat-value" id="stat-matches">0</div><div class="modal-stat-label">совпадений</div></div>
+                    <div class="modal-stat"><div class="modal-stat-value" id="stat-bombs">0</div><div class="modal-stat-label">бомб</div></div>
                 </div>
                 <button class="game-btn share-btn-in-modal" id="share-gameover-btn">📣 ПОДЕЛИТЬСЯ</button>
                 <button class="play-again-btn" id="play-again-btn">ИГРАТЬ СНОВА</button>
