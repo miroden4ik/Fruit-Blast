@@ -14,10 +14,6 @@ const BONUS_SVG = {
     bomb: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><circle cx="32" cy="32" r="20" fill="#2C3E50"/><circle cx="32" cy="32" r="16" fill="#E74C3C"/><text x="32" y="39" text-anchor="middle" fill="white" font-size="22" font-weight="bold">💣</text></svg>`,
     rainbow: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="{ID}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#FF6B6B"/><stop offset="20%" style="stop-color:#FFE66D"/><stop offset="40%" style="stop-color:#4ECDC4"/><stop offset="60%" style="stop-color:#667eea"/><stop offset="80%" style="stop-color:#764ba2"/><stop offset="100%" style="stop-color:#FF6B6B"/></linearGradient></defs><circle cx="32" cy="32" r="22" fill="url(#{ID})"/><text x="32" y="40" text-anchor="middle" fill="white" font-size="24" font-weight="bold">🌈</text></svg>`
 };
-const BONUS_BADGES = {
-    'striped-h': '➡️',
-    'striped-v': '⬇️'
-};
 
 const FRUIT_TYPES = Object.keys(FRUIT_SVG);
 
@@ -573,20 +569,6 @@ function playSoundMatch() {
     tone(659, 0.15, 'sine', 0.5, 0.07);
     tone(784, 0.18, 'sine', 0.5, 0.14);
 }
-function playSoundStriped() {
-    if (!audioCtx || !soundEnabled) return;
-    const sweep = audioCtx.createOscillator();
-    const g = audioCtx.createGain();
-    sweep.type = 'sawtooth';
-    sweep.frequency.setValueAtTime(180, audioCtx.currentTime);
-    sweep.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.25);
-    g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.35, audioCtx.currentTime + 0.02);
-    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.3);
-    sweep.connect(g); g.connect(masterGain);
-    sweep.start();
-    sweep.stop(audioCtx.currentTime + 0.32);
-}
 
 // ===== PLAYER COMBO SYSTEM =====
 function playComboTone(level) {
@@ -700,12 +682,7 @@ let gamesPlayedThisSession = 0;
 let matchesThisGame = 0;
 let bombsCreatedThisGame = 0;
 let rainbowsCreatedThisGame = 0;
-let stripesCreatedThisGame = 0;
 let comboHitsThisGame = 0;
-
-// ===== HINTS =====
-let hintTimer = null;
-const HINT_DELAY_MS = 3500;
 
 // ===== TIMER STATE =====
 const GAME_DURATION = 20 * 60; // 20 минут в секундах
@@ -1252,6 +1229,136 @@ function spawnComboParticles(level) {
 }
 
 // ===== TUTORIAL SYSTEM =====
+function hasTutorialDone() {
+    return localStorage.getItem('fruitBlastTutorialDone') === '1';
+}
+
+function showTutorial() {
+    if (hasTutorialDone()) return;
+    if (!gameStarted || gameOverShown) return;
+    const validMove = findTutorialMove();
+    if (!validMove) { completeTutorial(); return; }
+    isPaused = true;
+    stopGameTimer();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'tutorial-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:200;pointer-events:none;';
+    overlay.innerHTML = `
+        <div class="tutorial-backdrop" style="position:absolute;inset:0;background:rgba(0,0,0,0.6);"></div>
+        <div class="tutorial-spotlight" id="tutorial-spotlight" style="position:absolute;pointer-events:none;box-shadow:0 0 0 9999px rgba(0,0,0,0.55);border-radius:10px;"></div>
+        <div class="tutorial-text" id="tutorial-text" style="position:absolute;left:50%;transform:translateX(-50%);top:30px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:12px 20px;border-radius:14px;font-weight:700;font-size:15px;box-shadow:0 6px 20px rgba(0,0,0,0.25);pointer-events:none;white-space:nowrap;"></div>
+        <div class="tutorial-arrow" id="tutorial-arrow" style="position:absolute;width:40px;height:40px;pointer-events:none;z-index:201;"></div>
+        <button class="tutorial-btn" id="tutorial-skip-btn" style="pointer-events:auto;position:absolute;right:16px;top:16px;background:#fff;color:#555;border:none;padding:8px 14px;border-radius:10px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.15);">Пропустить</button>
+        <button class="tutorial-btn tutorial-next" id="tutorial-next-btn" style="pointer-events:auto;position:absolute;left:50%;transform:translateX(-50%);bottom:36px;background:linear-gradient(135deg,#FF6B6B,#FFB347);color:#fff;border:none;padding:12px 28px;border-radius:14px;font-weight:800;cursor:pointer;box-shadow:0 6px 18px rgba(255,107,107,0.4);font-size:15px;">Далее</button>
+    `;
+    document.body.appendChild(overlay);
+    document.getElementById('tutorial-skip-btn').addEventListener('click', completeTutorial);
+    document.getElementById('tutorial-next-btn').addEventListener('click', tutorialNextStep);
+
+    tutorialCurrentStep = 0;
+    tutorialMove = validMove;
+    tutorialShowStep(0);
+}
+
+let tutorialCurrentStep = 0;
+let tutorialMove = null;
+
+function tutorialShowStep(step) {
+    const spotlight = document.getElementById('tutorial-spotlight');
+    const text = document.getElementById('tutorial-text');
+    const arrow = document.getElementById('tutorial-arrow');
+    const nextBtn = document.getElementById('tutorial-next-btn');
+    if (!spotlight || !text) return;
+
+    spotlight.className = 'tutorial-spotlight';
+    arrow.className = 'tutorial-arrow';
+    arrow.style.display = 'none';
+
+    if (step === 0) {
+        const cell = matrixCells[tutorialMove.from.row][tutorialMove.from.col];
+        positionSpotlight(spotlight, cell);
+        text.textContent = 'Выбери этот фрукт';
+        text.className = 'tutorial-text';
+        nextBtn.textContent = 'Далее';
+    } else if (step === 1) {
+        const cell = matrixCells[tutorialMove.from.row][tutorialMove.from.col];
+        positionSpotlight(spotlight, cell);
+        positionArrow(arrow, tutorialMove.from, tutorialMove.to);
+        arrow.style.display = 'block';
+        text.textContent = 'Поменяй его местами с соседним';
+        text.className = 'tutorial-text';
+        nextBtn.textContent = 'Понял!';
+    } else {
+        completeTutorial();
+        return;
+    }
+    tutorialCurrentStep = step;
+}
+
+function tutorialNextStep() {
+    tutorialShowStep(tutorialCurrentStep + 1);
+}
+
+function positionSpotlight(spotlight, cellEl) {
+    const rect = cellEl.getBoundingClientRect();
+    spotlight.style.left = (rect.left - 3) + 'px';
+    spotlight.style.top = (rect.top - 3) + 'px';
+    spotlight.style.width = (rect.width + 6) + 'px';
+    spotlight.style.height = (rect.height + 6) + 'px';
+    spotlight.classList.add('visible');
+}
+
+function positionArrow(arrow, from, to) {
+    const fromCell = matrixCells[from.row][from.col];
+    const toCell = matrixCells[to.row][to.col];
+    const fromRect = fromCell.getBoundingClientRect();
+    const toRect = toCell.getBoundingClientRect();
+    const fx = fromRect.left + fromRect.width / 2;
+    const fy = fromRect.top + fromRect.height / 2;
+    const tx = toRect.left + toRect.width / 2;
+    const ty = toRect.top + toRect.height / 2;
+    const angle = Math.atan2(ty - fy, tx - fx) * 180 / Math.PI;
+    const dx = (tx - fx) / 2;
+    const dy = (ty - fy) / 2;
+    arrow.style.left = (fx + dx - 20) + 'px';
+    arrow.style.top = (fy + dy - 20) + 'px';
+    arrow.innerHTML = `<svg viewBox="0 0 40 40" style="width:100%;height:100%;transform:rotate(${angle}deg);"><path d="M4 20 L30 20 M22 12 L32 20 L22 28" stroke="#FFE66D" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+
+function findTutorialMove() {
+    for (let row = 0; row < BOARD_SIZE; row++) {
+        for (let col = 0; col < BOARD_SIZE; col++) {
+            if (col < BOARD_SIZE - 1) {
+                swapTemp(row, col, row, col + 1);
+                if (findMatches().length > 0) {
+                    swapTemp(row, col, row, col + 1);
+                    return { from: { row, col }, to: { row, col: col + 1 } };
+                }
+                swapTemp(row, col, row, col + 1);
+            }
+            if (row < BOARD_SIZE - 1) {
+                swapTemp(row, col, row + 1, col);
+                if (findMatches().length > 0) {
+                    swapTemp(row, col, row + 1, col);
+                    return { from: { row, col }, to: { row: row + 1, col } };
+                }
+                swapTemp(row, col, row + 1, col);
+            }
+        }
+    }
+    return null;
+}
+
+function completeTutorial() {
+    const overlay = document.getElementById('tutorial-overlay');
+    if (overlay) overlay.remove();
+    localStorage.setItem('fruitBlastTutorialDone', '1');
+    isPaused = false;
+    updateTimerDisplay();
+    startGameTimer();
+}
+
 // ===== STATISTICS =====
 let gameStats = {
     gamesPlayed: 0,
@@ -1261,7 +1368,6 @@ let gameStats = {
     totalCombos: 0,
     bombsCreated: 0,
     rainbowsCreated: 0,
-    stripesCreated: 0,
     totalMatches: 0,
     totalPlayTimeSec: 0
 };
@@ -1289,7 +1395,6 @@ function recordGameEnd(finalScore, playTimeSec) {
     gameStats.totalCombos += totalCombosThisGame;
     gameStats.bombsCreated += bombsCreatedThisGame;
     gameStats.rainbowsCreated += rainbowsCreatedThisGame;
-    gameStats.stripesCreated += stripesCreatedThisGame;
     gameStats.totalMatches += matchesThisGame;
     gameStats.totalPlayTimeSec += playTimeSec;
     saveStats();
@@ -1319,7 +1424,6 @@ function showProfileModal() {
         { icon: '⚡', value: gameStats.totalCombos,   label: 'Всего комбо' },
         { icon: '🧩', value: gameStats.totalMatches,  label: 'Всего совпадений' },
         { icon: '💣', value: gameStats.bombsCreated,  label: 'Бомб создано' },
-        { icon: '🚀', value: gameStats.stripesCreated, label: 'Ракет создано' },
         { icon: '🌈', value: gameStats.rainbowsCreated, label: 'Радуг создано' },
         { icon: '⏱️', value: formatPlayTimeSec(gameStats.totalPlayTimeSec), label: 'Общее время' }
     ];
@@ -1519,7 +1623,6 @@ function initGame() {
     matchesThisGame = 0;
     bombsCreatedThisGame = 0;
     rainbowsCreatedThisGame = 0;
-    stripesCreatedThisGame = 0;
     comboHitsThisGame = 0;
     selectedCell = null;
     isProcessing = false;
@@ -1530,7 +1633,6 @@ function initGame() {
     diamondsAwardedForScore = 0;
     timeLeft = GAME_DURATION;
     clearSavedGame();
-    clearHints();
 
     if (autoSaveIntervalId) clearInterval(autoSaveIntervalId);
     autoSaveIntervalId = setInterval(() => {
@@ -1559,7 +1661,7 @@ function initGame() {
         setTimeout(() => submitLeaderboard(bestScore), 1500);
     }
 
-    setTimeout(() => resetHintTimer(), 600);
+    setTimeout(() => showTutorial(), 600);
 }
 function createBoard() {
     board = [];
@@ -1588,32 +1690,6 @@ function bonusSvgHtml(bonus, id) {
 
 let gradientCounter = 0;
 
-function applyCellClasses(cell, fruitData) {
-    cell.className = 'cell';
-    if (!fruitData) return;
-    switch (fruitData.bonus) {
-        case 'bomb':      cell.classList.add('bomb'); break;
-        case 'rainbow':   cell.classList.add('rainbow'); break;
-        case 'striped-h': cell.classList.add('striped-h'); break;
-        case 'striped-v': cell.classList.add('striped-v'); break;
-    }
-}
-
-function buildFruitInner(fruitData) {
-    if (!fruitData) return '';
-    const id = 'g' + (gradientCounter++);
-    if (fruitData.bonus === 'rainbow') {
-        return bonusSvgHtml('rainbow', id);
-    }
-    let html = fruitSvgHtml(fruitData.type, id);
-    if (fruitData.bonus === 'bomb') {
-        html += '<span class="bomb-badge">💣</span>';
-    } else if (fruitData.bonus === 'striped-h' || fruitData.bonus === 'striped-v') {
-        html += `<span class="striped-badge">${BONUS_BADGES[fruitData.bonus]}</span>`;
-    }
-    return html;
-}
-
 function renderBoard() {
     gameBoard.innerHTML = '';
     matrixCells = [];
@@ -1626,11 +1702,22 @@ function renderBoard() {
             cell.dataset.col = col;
 
             const fruitData = board[row][col];
-            applyCellClasses(cell, fruitData);
             if (fruitData) {
                 const fruitDiv = document.createElement('div');
                 fruitDiv.className = 'fruit';
-                fruitDiv.innerHTML = buildFruitInner(fruitData);
+                const id = 'g' + (gradientCounter++);
+                if (fruitData.bonus === 'bomb') {
+                    // Бомба показывает свой тип фрукта + значок бомбы,
+                    // чтобы было видно, с какими фруктами её совмещать.
+                    fruitDiv.innerHTML = fruitSvgHtml(fruitData.type, id)
+                        + '<span class="bomb-badge">💣</span>';
+                    cell.classList.add('bomb');
+                } else if (fruitData.bonus === 'rainbow') {
+                    fruitDiv.innerHTML = bonusSvgHtml('rainbow', id);
+                    cell.classList.add('rainbow');
+                } else {
+                    fruitDiv.innerHTML = fruitSvgHtml(fruitData.type, id);
+                }
                 cell.appendChild(fruitDiv);
             }
 
@@ -1641,129 +1728,9 @@ function renderBoard() {
     }
 }
 
-function updateCellVisual(row, col) {
-    const cell = matrixCells[row] && matrixCells[row][col];
-    if (!cell) return;
-    const fruitData = board[row][col];
-    applyCellClasses(cell, fruitData);
-    let fruitDiv = cell.querySelector('.fruit');
-    if (fruitData) {
-        if (!fruitDiv) {
-            fruitDiv = document.createElement('div');
-            fruitDiv.className = 'fruit';
-            cell.appendChild(fruitDiv);
-        }
-        fruitDiv.innerHTML = buildFruitInner(fruitData);
-        fruitDiv.style.transform = '';
-        fruitDiv.style.transition = '';
-    } else if (fruitDiv) {
-        fruitDiv.remove();
-    }
-}
-
-function getCellCenterOnBoard(row, col) {
-    const cell = matrixCells[row] && matrixCells[row][col];
-    if (!cell) return null;
-    const rect = cell.getBoundingClientRect();
-    const boardRect = gameBoard.getBoundingClientRect();
-    return {
-        x: rect.left - boardRect.left + rect.width / 2,
-        y: rect.top - boardRect.top + rect.height / 2
-    };
-}
-
-function spawnScorePopup(row, col, value, color) {
-    if (value <= 0) return;
-    const center = getCellCenterOnBoard(row, col);
-    if (!center) return;
-    const el = document.createElement('div');
-    el.className = 'score-popup';
-    el.style.left = center.x + 'px';
-    el.style.top = center.y + 'px';
-    if (color) el.style.color = color;
-    el.textContent = '+' + value;
-    gameBoard.appendChild(el);
-    setTimeout(() => el.remove(), 1000);
-}
-
-function showSweepRow(row, scoreVal) {
-    const cell = matrixCells[row] && matrixCells[row][0];
-    if (!cell) return;
-    const boardRect = gameBoard.getBoundingClientRect();
-    const rect = cell.getBoundingClientRect();
-    const el = document.createElement('div');
-    el.className = 'sweep-row';
-    el.style.left = (rect.left - boardRect.left) + 'px';
-    el.style.top = (rect.top - boardRect.top + rect.height * 0.25) + 'px';
-    el.style.width = boardRect.width + 'px';
-    el.style.height = (rect.height * 0.5) + 'px';
-    gameBoard.appendChild(el);
-    setTimeout(() => el.remove(), 500);
-}
-
-function showSweepCol(col, scoreVal) {
-    const cell = matrixCells[0] && matrixCells[0][col];
-    if (!cell) return;
-    const boardRect = gameBoard.getBoundingClientRect();
-    const rect = cell.getBoundingClientRect();
-    const el = document.createElement('div');
-    el.className = 'sweep-col';
-    el.style.top = (rect.top - boardRect.top) + 'px';
-    el.style.left = (rect.left - boardRect.left + rect.width * 0.25) + 'px';
-    el.style.height = boardRect.height + 'px';
-    el.style.width = (rect.width * 0.5) + 'px';
-    gameBoard.appendChild(el);
-    setTimeout(() => el.remove(), 500);
-}
-
-function findAnyValidMove() {
-    for (let row = 0; row < BOARD_SIZE; row++) {
-        for (let col = 0; col < BOARD_SIZE; col++) {
-            if (col < BOARD_SIZE - 1) {
-                swapTemp(row, col, row, col + 1);
-                const m = findMatches();
-                swapTemp(row, col, row, col + 1);
-                if (m.length > 0) return { from: { row, col }, to: { row, col: col + 1 } };
-            }
-            if (row < BOARD_SIZE - 1) {
-                swapTemp(row, col, row + 1, col);
-                const m = findMatches();
-                swapTemp(row, col, row + 1, col);
-                if (m.length > 0) return { from: { row, col }, to: { row: row + 1, col } };
-            }
-        }
-    }
-    return null;
-}
-
-function clearHints() {
-    if (hintTimer) { clearTimeout(hintTimer); hintTimer = null; }
-    if (!matrixCells) return;
-    for (let r = 0; r < BOARD_SIZE; r++) {
-        for (let c = 0; c < BOARD_SIZE; c++) {
-            const cell = matrixCells[r] && matrixCells[r][c];
-            if (cell) cell.classList.remove('hint');
-        }
-    }
-}
-
-function resetHintTimer() {
-    clearHints();
-    if (isPaused || gameOverShown || isProcessing) return;
-    hintTimer = setTimeout(() => {
-        const move = findAnyValidMove();
-        if (!move) return;
-        const c1 = matrixCells[move.from.row] && matrixCells[move.from.row][move.from.col];
-        const c2 = matrixCells[move.to.row] && matrixCells[move.to.row][move.to.col];
-        if (c1) c1.classList.add('hint');
-        if (c2) c2.classList.add('hint');
-    }, HINT_DELAY_MS);
-}
-
 // ===== INPUT HANDLING =====
 function handleCellClick(e) {
     if (isProcessing || isPaused || gameOverShown) return;
-    resetHintTimer();
 
     const cell = e.currentTarget;
     const row = parseInt(cell.dataset.row);
@@ -1797,16 +1764,11 @@ function handleCellClick(e) {
 }
 
 let touchStart = null;
-let touchDragDir = null; // 'h' or 'v' or null
-let touchTarget = null;
 
 function handleTouchStart(e) {
     if (isProcessing || isPaused || gameOverShown) return;
-    resetHintTimer();
     const touch = e.changedTouches[0];
     touchStart = { x: touch.clientX, y: touch.clientY, row: null, col: null };
-    touchDragDir = null;
-    touchTarget = null;
 
     const cell = document.elementFromPoint(touch.clientX, touch.clientY);
     const cellEl = cell ? cell.closest('.cell') : null;
@@ -1826,8 +1788,6 @@ function handleTouchStart(e) {
             const from = selectedCell;
             selectedCell = null;
             swapFruits(from, { row: touchStart.row, col: touchStart.col });
-            touchStart = null;
-            return;
         } else {
             const prevCell = document.querySelector(`.cell[data-row="${selectedCell.row}"][data-col="${selectedCell.col}"]`);
             if (prevCell) prevCell.classList.remove('selected');
@@ -1837,120 +1797,35 @@ function handleTouchStart(e) {
     }
 }
 
-function handleTouchMove(e) {
-    if (isProcessing || isPaused || gameOverShown) return;
-    if (!touchStart || touchStart.row === null) return;
-    const touch = e.changedTouches[0];
-    const dx = touch.clientX - touchStart.x;
-    const dy = touch.clientY - touchStart.y;
-    const adx = Math.abs(dx);
-    const ady = Math.abs(dy);
-
-    // Determine direction once we have enough movement
-    if (!touchDragDir) {
-        if (adx < 10 && ady < 10) return;
-        if (adx > ady) touchDragDir = 'h';
-        else touchDragDir = 'v';
-    }
-
-    // Snap: figure out target adjacent cell based on drag length
-    let tRow = touchStart.row;
-    let tCol = touchStart.col;
-    if (touchDragDir === 'h') {
-        if (adx < 14) { tCol = touchStart.col; touchTarget = null; }
-        else if (dx > 0) { tCol = touchStart.col + 1; touchTarget = 'right'; }
-        else { tCol = touchStart.col - 1; touchTarget = 'left'; }
-    } else {
-        if (ady < 14) { tRow = touchStart.row; touchTarget = null; }
-        else if (dy > 0) { tRow = touchStart.row + 1; touchTarget = 'down'; }
-        else { tRow = touchStart.row - 1; touchTarget = 'up'; }
-    }
-
-    // Clamp to board
-    if (tRow < 0 || tRow >= BOARD_SIZE || tCol < 0 || tCol >= BOARD_SIZE) {
-        tRow = touchStart.row;
-        tCol = touchStart.col;
-        touchTarget = null;
-    }
-
-    const fromCell = matrixCells[touchStart.row] && matrixCells[touchStart.row][touchStart.col];
-    const toCell = (tRow !== touchStart.row || tCol !== touchStart.col)
-        ? (matrixCells[tRow] && matrixCells[tRow][tCol]) : null;
-
-    const fromFruit = fromCell && fromCell.querySelector('.fruit');
-    const toFruit = toCell && toCell.querySelector('.fruit');
-
-    if (fromFruit && toFruit) {
-        // Clamp the movement to cell width
-        const rect = fromCell.getBoundingClientRect();
-        const cellW = rect.width;
-        const cellH = rect.height;
-        let mx = 0, my = 0;
-        if (touchDragDir === 'h') {
-            mx = Math.max(-cellW, Math.min(cellW, dx));
-        } else {
-            my = Math.max(-cellH, Math.min(cellH, dy));
-        }
-        fromFruit.style.transition = 'none';
-        fromFruit.style.transform = `translate(${mx}px, ${my}px)`;
-        toFruit.style.transition = 'none';
-        toFruit.style.transform = `translate(${-mx}px, ${-my}px)`;
-    } else if (fromFruit) {
-        // Target is off-board: snap back
-        fromFruit.style.transition = 'none';
-        fromFruit.style.transform = `translate(0,0)`;
-    }
-}
-
 function handleTouchEnd(e) {
     if (isProcessing || isPaused || gameOverShown) return;
     if (!touchStart) return;
-    resetHintTimer();
     const touch = e.changedTouches[0];
     const dx = touch.clientX - touchStart.x;
     const dy = touch.clientY - touchStart.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
 
-    // Determine if we should commit the swap
-    let targetRow = touchStart.row;
-    let targetCol = touchStart.col;
-    const adx = Math.abs(dx);
-    const ady = Math.abs(dy);
-    let doSwap = false;
-
-    if (touchTarget) {
-        if (touchTarget === 'right') { targetCol = touchStart.col + 1; doSwap = true; }
-        else if (touchTarget === 'left') { targetCol = touchStart.col - 1; doSwap = true; }
-        else if (touchTarget === 'down') { targetRow = touchStart.row + 1; doSwap = true; }
-        else if (touchTarget === 'up') { targetRow = touchStart.row - 1; doSwap = true; }
-    } else if (adx > 30 || ady > 30) {
-        if (adx > ady) targetCol += dx > 0 ? 1 : -1;
-        else targetRow += dy > 0 ? 1 : -1;
-        doSwap = true;
+    if (dist > 30 && touchStart.row !== null) {
+        let targetRow = touchStart.row;
+        let targetCol = touchStart.col;
+        if (Math.abs(dx) > Math.abs(dy)) {
+            targetCol += dx > 0 ? 1 : -1;
+        } else {
+            targetRow += dy > 0 ? 1 : -1;
+        }
+        if (targetRow >= 0 && targetRow < BOARD_SIZE && targetCol >= 0 && targetCol < BOARD_SIZE) {
+            const from = touchStart;
+            const prevCell = document.querySelector(`.cell[data-row="${from.row}"][data-col="${from.col}"]`);
+            if (prevCell) prevCell.classList.remove('selected');
+            if (selectedCell) selectedCell = null;
+            swapFruits(from, { row: targetRow, col: targetCol });
+        } else if (selectedCell) {
+            const prevCell = document.querySelector(`.cell[data-row="${selectedCell.row}"][data-col="${selectedCell.col}"]`);
+            if (prevCell) prevCell.classList.remove('selected');
+            selectedCell = null;
+        }
     }
-
-    // Animate back (cancel) then call swapFruits (which will animate & execute)
-    const fromCell = matrixCells[touchStart.row] && matrixCells[touchStart.row][touchStart.col];
-    const fromFruit = fromCell && fromCell.querySelector('.fruit');
-    const toCell = (targetRow !== touchStart.row || targetCol !== touchStart.col)
-        ? (matrixCells[targetRow] && matrixCells[targetRow][targetCol]) : null;
-    const toFruit = toCell && toCell.querySelector('.fruit');
-    if (fromFruit) { fromFruit.style.transition = 'transform 0.18s ease-out'; fromFruit.style.transform = 'translate(0,0)'; }
-    if (toFruit) { toFruit.style.transition = 'transform 0.18s ease-out'; toFruit.style.transform = 'translate(0,0)'; }
-
-    const from = touchStart;
     touchStart = null;
-    touchDragDir = null;
-    touchTarget = null;
-
-    if (doSwap && targetRow >= 0 && targetRow < BOARD_SIZE && targetCol >= 0 && targetCol < BOARD_SIZE
-        && (targetRow !== from.row || targetCol !== from.col)) {
-        const prevCell = document.querySelector(`.cell[data-row="${from.row}"][data-col="${from.col}"]`);
-        if (prevCell) prevCell.classList.remove('selected');
-        if (selectedCell) selectedCell = null;
-        swapFruits(from, { row: targetRow, col: targetCol });
-    } else if (selectedCell) {
-        // no-op, keep selection
-    }
 }
 
 function isAdjacent(cell1, cell2) {
@@ -1968,233 +1843,79 @@ async function swapFruits(cell1, cell2) {
         selectedCell = null;
     }
 
-    const cell1El = matrixCells[cell1.row] && matrixCells[cell1.row][cell1.col];
-    const cell2El = matrixCells[cell2.row] && matrixCells[cell2.row][cell2.col];
+    const cell1El = matrixCells[cell1.row][cell1.col];
+    const cell2El = matrixCells[cell2.row][cell2.col];
 
     if (cell1El && cell2El && cell1El.querySelector('.fruit') && cell2El.querySelector('.fruit')) {
         const dx = (cell2.col - cell1.col) * 100;
         const dy = (cell2.row - cell1.row) * 100;
-        cell1El.querySelector('.fruit').style.transition = 'transform 0.22s cubic-bezier(.4,.9,.5,1.3)';
-        cell2El.querySelector('.fruit').style.transition = 'transform 0.22s cubic-bezier(.4,.9,.5,1.3)';
+        cell1El.querySelector('.fruit').style.transition = 'transform 0.2s ease-in-out';
+        cell2El.querySelector('.fruit').style.transition = 'transform 0.2s ease-in-out';
         cell1El.querySelector('.fruit').style.transform = `translate(${dx}%, ${dy}%)`;
         cell2El.querySelector('.fruit').style.transform = `translate(${-dx}%, ${-dy}%)`;
-        await sleep(210);
+        await sleep(200);
     }
 
     const temp = board[cell1.row][cell1.col];
     board[cell1.row][cell1.col] = board[cell2.row][cell2.col];
     board[cell2.row][cell2.col] = temp;
 
-    // Now check for bonus-swap combinations (two bonuses swapped)
-    const tileA = board[cell1.row][cell1.col];
-    const tileB = board[cell2.row][cell2.col];
-    const bonusA = tileA && tileA.bonus;
-    const bonusB = tileB && tileB.bonus;
-    const bothBonus = bonusA && bonusB;
+    renderBoard();
 
-    let swapActivated = false;
-    let directClearSet = new Set();
+    let rainbowActivated = false;
+    const rainbowPos = [cell1, cell2].find(p => board[p.row][p.col] && board[p.row][p.col].bonus === 'rainbow');
+    if (rainbowPos) {
+        const other = rainbowPos === cell1 ? cell2 : cell1;
+        const partner = board[other.row][other.col];
+        const partnerType = partner && partner.type;
 
-    if (bothBonus) {
-        swapActivated = true;
-        // ============== COMBO: BOMB + BOMB ==============
-        if (bonusA === 'bomb' && bonusB === 'bomb') {
-            showMessage('💥💥 ДВОЙНОЙ ВЗРЫВ!');
-            playSoundBomb(); playSoundBomb();
-            // 7x7 centered between both tiles
-            const midR = Math.round((cell1.row + cell2.row) / 2);
-            const midC = Math.round((cell1.col + cell2.col) / 2);
-            for (let r = midR - 3; r <= midR + 3; r++) {
-                for (let c = midC - 3; c <= midC + 3; c++) {
-                    if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
-                        directClearSet.add(r + ',' + c);
+        if (partnerType && partnerType === 'rainbow') {
+            // Радуга + радуга: очищаем всё поле
+            rainbowActivated = true;
+            playSoundRainbow();
+            score += 100;
+            updateScoreDisplay();
+            for (let r = 0; r < BOARD_SIZE; r++) {
+                for (let c = 0; c < BOARD_SIZE; c++) {
+                    if (board[r][c]) spawnRainbowParticles(r, c);
+                    board[r][c] = null;
+                }
+            }
+            showMessage('МЕГА-РАДУГА! 🌈');
+            await dropFruits();
+            await fillEmptySpaces();
+            renderBoard();
+        } else if (partnerType && partnerType !== 'rainbow') {
+            rainbowActivated = true;
+            playSoundRainbow();
+            score += 50;
+            updateScoreDisplay();
+            // Радуга + бомба: взрыв всего поля
+            const partnerIsBomb = partner && partner.bonus === 'bomb';
+            for (let r = 0; r < BOARD_SIZE; r++) {
+                for (let c = 0; c < BOARD_SIZE; c++) {
+                    if (partnerIsBomb) {
+                        board[r][c] = null;
                         spawnBombParticles(r, c);
+                    } else if (board[r][c] && board[r][c].type === partnerType && board[r][c].bonus !== 'rainbow') {
+                        board[r][c] = null;
+                        spawnMatchParticles(r, c, partnerType);
                     }
                 }
             }
-            score += 500;
-        // ============== COMBO: STRIPED + STRIPED ==============
-        } else if ((bonusA.startsWith('striped') || bonusA === 'bomb') && (bonusB.startsWith('striped') || bonusB === 'bomb') && !(bonusA === 'bomb' && bonusB === 'bomb')) {
-            // bomb+striped or striped+striped → clear 3 rows + 3 columns through both cells
-            const rows = new Set(); rows.add(cell1.row); rows.add(cell2.row);
-            if (bonusA === 'bomb' || bonusB === 'bomb') {
-                // add rows around
-                rows.add(cell1.row - 1); rows.add(cell1.row + 1); rows.add(cell2.row - 1); rows.add(cell2.row + 1);
-            }
-            const cols = new Set(); cols.add(cell1.col); cols.add(cell2.col);
-            if (bonusA === 'bomb' || bonusB === 'bomb') {
-                cols.add(cell1.col - 1); cols.add(cell1.col + 1); cols.add(cell2.col - 1); cols.add(cell2.col + 1);
-            }
-            rows.forEach(r => { if (r >= 0 && r < BOARD_SIZE) { showSweepRow(r); for (let c = 0; c < BOARD_SIZE; c++) directClearSet.add(r + ',' + c); } });
-            cols.forEach(c => { if (c >= 0 && c < BOARD_SIZE) { showSweepCol(c); for (let r = 0; r < BOARD_SIZE; r++) directClearSet.add(r + ',' + c); } });
-            if (bonusA === 'bomb' || bonusB === 'bomb') {
-                showMessage('💥 Бомба + Ракета!');
+            spawnRainbowParticles(rainbowPos.row, rainbowPos.col);
+            board[rainbowPos.row][rainbowPos.col] = null;
+            if (partnerIsBomb) {
+                showMessage('Радуга + Бомба! 💥');
                 playSoundBomb();
             } else {
-                showMessage('✚ КРЕСТ!');
+                showMessage('Радуга! 🌈');
             }
-            playSoundStriped(); playSoundStriped();
-            score += 350;
-        // ============== COMBO: RAINBOW + ANY BONUS ==============
-        } else if (bonusA === 'rainbow' || bonusB === 'rainbow') {
-            const rbTile = bonusA === 'rainbow' ? tileA : tileB;
-            const otherTile = bonusA === 'rainbow' ? tileB : tileA;
-            const otherBonus = otherTile && otherTile.bonus;
-            const otherType = otherTile && otherTile.type;
-
-            if (otherBonus === 'rainbow') {
-                // Rainbow + rainbow → full clear
-                showMessage('🌈🌈 МЕГА-РАДУГА!');
-                playSoundRainbow(); playSoundRainbow();
-                for (let r = 0; r < BOARD_SIZE; r++) {
-                    for (let c = 0; c < BOARD_SIZE; c++) {
-                        if (board[r][c]) spawnRainbowParticles(r, c);
-                        directClearSet.add(r + ',' + c);
-                    }
-                }
-                score += 600;
-            } else {
-                // Rainbow + striped/bomb → convert all matching tiles to that bonus, then activate
-                playSoundRainbow();
-                const baseType = (otherBonus === 'bomb' || !otherType) ? FRUIT_TYPES[Math.floor(Math.random() * FRUIT_TYPES.length)] : otherType;
-                if (otherBonus === 'bomb') {
-                    showMessage('🌈 💣 РАДУГА + БОМБА!');
-                    playSoundBomb();
-                    for (let r = 0; r < BOARD_SIZE; r++) {
-                        for (let c = 0; c < BOARD_SIZE; c++) {
-                            directClearSet.add(r + ',' + c);
-                            spawnBombParticles(r, c);
-                        }
-                    }
-                    score += 700;
-                } else {
-                    // striped: find all tiles of partnerType, convert to the same striped bonus, then clear rows/cols
-                    showMessage(otherBonus === 'striped-h' ? '🌈➡️ Радуга + Ракета (ряд)!' : '🌈⬇️ Радуга + Ракета (столбец)!');
-                    playSoundStriped();
-                    const bonusDir = otherBonus;
-                    const rowsHit = new Set();
-                    const colsHit = new Set();
-                    for (let r = 0; r < BOARD_SIZE; r++) {
-                        for (let c = 0; c < BOARD_SIZE; c++) {
-                            const t = board[r][c];
-                            if (t && t.type === baseType && t.bonus !== 'rainbow') {
-                                if (bonusDir === 'striped-h') rowsHit.add(r);
-                                if (bonusDir === 'striped-v') colsHit.add(c);
-                                directClearSet.add(r + ',' + c);
-                            }
-                        }
-                    }
-                    rowsHit.forEach(r => { showSweepRow(r); for (let c = 0; c < BOARD_SIZE; c++) directClearSet.add(r + ',' + c); });
-                    colsHit.forEach(c => { showSweepCol(c); for (let r = 0; r < BOARD_SIZE; r++) directClearSet.add(r + ',' + c); });
-                    score += 450;
-                }
-            }
+            await dropFruits();
+            await fillEmptySpaces();
+            renderBoard();
         }
     }
-
-    // ============== RAINBOW + REGULAR TILE (no other bonus) ==============
-    if (!swapActivated) {
-        const rainbowIdx = (tileA && tileA.bonus === 'rainbow') ? 0 : ((tileB && tileB.bonus === 'rainbow') ? 1 : -1);
-        if (rainbowIdx >= 0) {
-            const rainbowPos = rainbowIdx === 0 ? cell1 : cell2;
-            const partner = rainbowIdx === 0 ? tileB : tileA;
-            const partnerPos = rainbowIdx === 0 ? cell2 : cell1;
-            if (partner && partner.bonus !== 'rainbow') {
-                swapActivated = true;
-                playSoundRainbow();
-                const partnerType = partner.type || FRUIT_TYPES[0];
-                const partnerIsBomb = partner.bonus === 'bomb';
-                const partnerIsStriped = (partner.bonus === 'striped-h' || partner.bonus === 'striped-v');
-                if (partnerIsBomb) {
-                    // Rainbow + bomb: full field clear
-                    showMessage('🌈💣 Радуга + Бомба!');
-                    playSoundBomb();
-                    for (let r = 0; r < BOARD_SIZE; r++) {
-                        for (let c = 0; c < BOARD_SIZE; c++) {
-                            directClearSet.add(r + ',' + c);
-                            spawnBombParticles(r, c);
-                        }
-                    }
-                    score += 650;
-                } else if (partnerIsStriped) {
-                    showMessage(partner.bonus === 'striped-h' ? '🌈➡️ Радуга + Ракета!' : '🌈⬇️ Радуга + Ракета!');
-                    playSoundStriped();
-                    const bonusDir = partner.bonus;
-                    const rowsHit = new Set();
-                    const colsHit = new Set();
-                    for (let r = 0; r < BOARD_SIZE; r++) {
-                        for (let c = 0; c < BOARD_SIZE; c++) {
-                            const t = board[r][c];
-                            if (t && t.type === partnerType && t.bonus !== 'rainbow') {
-                                if (bonusDir === 'striped-h') rowsHit.add(r);
-                                if (bonusDir === 'striped-v') colsHit.add(c);
-                                directClearSet.add(r + ',' + c);
-                            }
-                        }
-                    }
-                    rowsHit.forEach(r => { showSweepRow(r); for (let c = 0; c < BOARD_SIZE; c++) directClearSet.add(r + ',' + c); });
-                    colsHit.forEach(c => { showSweepCol(c); for (let r = 0; r < BOARD_SIZE; r++) directClearSet.add(r + ',' + c); });
-                    score += 420;
-                } else {
-                    // rainbow + normal tile → remove all of that type
-                    showMessage('🌈 Радуга! +' + (2 * FRUIT_TYPES.length));
-                    let removed = 0;
-                    for (let r = 0; r < BOARD_SIZE; r++) {
-                        for (let c = 0; c < BOARD_SIZE; c++) {
-                            const t = board[r][c];
-                            if (t && t.type === partnerType && t.bonus !== 'rainbow') {
-                                directClearSet.add(r + ',' + c);
-                                spawnMatchParticles(r, c, partnerType);
-                                removed++;
-                            }
-                        }
-                    }
-                    directClearSet.add(rainbowPos.row + ',' + rainbowPos.col);
-                    spawnRainbowParticles(rainbowPos.row, rainbowPos.col);
-                    score += 50 + removed * 60;
-                }
-            }
-        }
-    }
-
-    // Apply direct clear set + cascades
-    if (directClearSet.size > 0) {
-        // Expand: if there are bonuses in directClearSet, trigger them too (cascade once)
-        let changed = true;
-        let safety = 0;
-        while (changed && safety < 6) {
-            changed = false; safety++;
-            for (const key of Array.from(directClearSet)) {
-                const [r, c] = key.split(',').map(Number);
-                const t = board[r][c];
-                if (!t || !t.bonus) continue;
-                if (t.bonus === 'striped-h' || t.bonus === 'striped-v' || t.bonus === 'bomb') {
-                    const before = directClearSet.size;
-                    collectCellsForBonus(t.bonus, r, c, directClearSet, false);
-                    if (directClearSet.size > before) changed = true;
-                    if (t.bonus === 'striped-h') showSweepRow(r);
-                    if (t.bonus === 'striped-v') showSweepCol(c);
-                    if (t.bonus === 'bomb') { spawnBombParticles(r, c); }
-                }
-            }
-        }
-        // Visual + score
-        directClearSet.forEach(k => {
-            const [r, c] = k.split(',').map(Number);
-            const cell = matrixCells[r] && matrixCells[r][c];
-            if (cell) { cell.classList.add('explode'); spawnScorePopup(r, c, 60); }
-        });
-        updateScoreDisplay();
-        await sleep(320);
-        directClearSet.forEach(k => {
-            const [r, c] = k.split(',').map(Number);
-            board[r][c] = null;
-        });
-        await dropFruits();
-        await fillEmptySpaces();
-    }
-
-    renderBoard();
 
     const matches = findMatches();
 
@@ -2203,23 +1924,12 @@ async function swapFruits(cell1, cell2) {
         await processMatches();
         onPlayerMatch();
         matchesThisGame += matches.length;
-    } else if (!swapActivated && directClearSet.size === 0) {
+    } else if (!rainbowActivated) {
         playSoundInvalid();
-        shakeInvalidCells(cell1, cell2);
-        // Swap back (invert the swap we already did)
+        flashInvalidCells(cell1, cell2);
         const temp2 = board[cell1.row][cell1.col];
         board[cell1.row][cell1.col] = board[cell2.row][cell2.col];
         board[cell2.row][cell2.col] = temp2;
-        // Animate swap-back
-        if (cell1El && cell2El && cell1El.querySelector('.fruit') && cell2El.querySelector('.fruit')) {
-            const dx = (cell1.col - cell2.col) * 100;
-            const dy = (cell1.row - cell2.row) * 100;
-            cell1El.querySelector('.fruit').style.transition = 'transform 0.18s ease-out';
-            cell2El.querySelector('.fruit').style.transition = 'transform 0.18s ease-out';
-            cell1El.querySelector('.fruit').style.transform = `translate(${dx}%, ${dy}%)`;
-            cell2El.querySelector('.fruit').style.transform = `translate(${-dx}%, ${-dy}%)`;
-        }
-        await sleep(200);
         renderBoard();
     }
 
@@ -2228,81 +1938,43 @@ async function swapFruits(cell1, cell2) {
     if (!hasValidMoves() && !gameOverShown && !isPaused) {
         await shuffleBoard();
     }
-    resetHintTimer();
 }
 
-function shakeInvalidCells(cell1, cell2) {
-    const c1 = matrixCells[cell1.row] && matrixCells[cell1.row][cell1.col];
-    const c2 = matrixCells[cell2.row] && matrixCells[cell2.row][cell2.col];
+function flashInvalidCells(cell1, cell2) {
+    const c1 = document.querySelector(`.cell[data-row="${cell1.row}"][data-col="${cell1.col}"]`);
+    const c2 = document.querySelector(`.cell[data-row="${cell2.row}"][data-col="${cell2.col}"]`);
     [c1, c2].forEach(c => {
         if (c) {
-            c.classList.remove('shake');
-            // force reflow to restart animation
-            void c.offsetWidth;
-            c.classList.add('shake');
-            setTimeout(() => c.classList.remove('shake'), 400);
+            c.classList.add('invalid');
+            setTimeout(() => c.classList.remove('invalid'), 400);
         }
     });
 }
 
 // ===== MATCH DETECTION =====
-function findMatchesRaw() {
+function findMatches() {
     const matches = [];
+
     for (let row = 0; row < BOARD_SIZE; row++) {
         for (let col = 0; col < BOARD_SIZE - 2; col++) {
             const match = checkHorizontalMatch(row, col);
             if (match.length >= 3) {
-                matches.push({ cells: match, direction: 'horizontal', length: match.length });
+                matches.push({ cells: match, direction: 'horizontal' });
                 col += match.length - 1;
             }
         }
     }
+
     for (let col = 0; col < BOARD_SIZE; col++) {
         for (let row = 0; row < BOARD_SIZE - 2; row++) {
             const match = checkVerticalMatch(row, col);
             if (match.length >= 3) {
-                matches.push({ cells: match, direction: 'vertical', length: match.length });
+                matches.push({ cells: match, direction: 'vertical' });
                 row += match.length - 1;
             }
         }
     }
-    return matches;
-}
 
-function findMatches() {
-    const matches = findMatchesRaw();
-    // Annotate each match with: bonus to create (if any) and position
-    const keyCount = {};
-    matches.forEach(m => {
-        m.cells.forEach(c => {
-            const k = c.row + ',' + c.col;
-            keyCount[k] = (keyCount[k] || 0) + 1;
-        });
-    });
-    matches.forEach(m => {
-        let shape = 'line';
-        let bonus = null;
-        let bonusPos = null;
-        const intersections = m.cells.filter(c => (keyCount[c.row + ',' + c.col] || 0) >= 2);
-        if (intersections.length > 0) {
-            shape = 'cross';
-            bonus = 'bomb';
-            bonusPos = intersections[0];
-        } else if (m.length >= 5) {
-            shape = 'line5';
-            bonus = 'rainbow';
-            bonusPos = m.cells[Math.floor(m.cells.length / 2)];
-        } else if (m.length === 4) {
-            shape = 'line4';
-            // horizontal match → striped-v (clears column on activation)
-            // vertical match → striped-h (clears row on activation)
-            bonus = (m.direction === 'horizontal') ? 'striped-v' : 'striped-h';
-            bonusPos = m.cells[1];
-        }
-        m.shape = shape;
-        m.createBonus = bonus;
-        m.createBonusPos = bonusPos;
-    });
     return matches;
 }
 
@@ -2334,193 +2006,135 @@ function checkVerticalMatch(row, col) {
     return match;
 }
 
-function collectCellsForBonus(bonus, row, col, outSet, skipSelf) {
-    if (bonus === 'striped-h') {
-        // clears row
-        for (let c = 0; c < BOARD_SIZE; c++) {
-            if (!skipSelf || c !== col) outSet.add(row + ',' + c);
-        }
-    } else if (bonus === 'striped-v') {
-        for (let r = 0; r < BOARD_SIZE; r++) {
-            if (!skipSelf || r !== row) outSet.add(r + ',' + col);
-        }
-    } else if (bonus === 'bomb') {
-        for (let r = row - 2; r <= row + 2; r++) {
-            for (let c = col - 2; c <= col + 2; c++) {
-                if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
-                    if (!skipSelf || (r !== row || c !== col)) outSet.add(r + ',' + c);
-                }
-            }
-        }
-    } else if (bonus === 'rainbow') {
-        // handled separately at activation site
-    }
-}
-
 // ===== PROCESS MATCHES =====
 async function processMatches() {
     let matches = findMatches();
-    const baseScorePerTile = 60;
 
     while (matches.length > 0) {
         comboCount++;
         let matchScore = 0;
         const allMatchedCells = new Set();
-        const createdBonusMap = new Map(); // key "r,c" -> {type, bonus}
-        let messageShown = false;
+        let createdBonuses = [];
 
         for (const match of matches) {
             const matchLength = match.cells.length;
-            const lineScore = matchLength * baseScorePerTile * (matchLength >= 4 ? 1.5 : 1);
-            matchScore += Math.round(lineScore);
+            let baseScore = 0;
+            const centerCell = match.cells[Math.floor(match.cells.length / 2)];
+            let createdBonus = null;
 
-            // Score popups for every cell in match
-            for (const cell of match.cells) {
-                spawnScorePopup(cell.row, cell.col, baseScorePerTile, FRUIT_COLORS[board[cell.row][cell.col] && board[cell.row][cell.col].type]);
-                spawnMatchParticles(cell.row, cell.col, board[cell.row] && board[cell.row][cell.col] && board[cell.row][cell.col].type);
+            if (matchLength === 3) {
+                baseScore = 10;
+            } else if (matchLength === 4) {
+                baseScore = 50;
+                const bombType = board[centerCell.row][centerCell.col].type;
+                board[centerCell.row][centerCell.col] = { type: bombType, bonus: 'bomb' };
+                createdBonus = 'bomb';
+                bombsCreatedThisGame++;
+                addDiamonds(1);
+            } else if (matchLength >= 5) {
+                baseScore = 100;
+                board[centerCell.row][centerCell.col] = { type: 'rainbow', bonus: 'rainbow' };
+                createdBonus = 'rainbow';
+                rainbowsCreatedThisGame++;
+                addDiamonds(2);
             }
 
-            // Decide bonus creation — if match requires a bonus, mark its cell to be KEPT
-            if (match.createBonus && match.createBonusPos) {
-                const pos = match.createBonusPos;
-                const type = board[pos.row][pos.col] && board[pos.row][pos.col].type;
-                const bonusType = match.createBonus;
-                const fruitType = (bonusType === 'rainbow') ? 'rainbow' : type;
-                createdBonusMap.set(pos.row + ',' + pos.col, { type: fruitType, bonus: bonusType });
-                // counters
-                if (bonusType === 'bomb') { bombsCreatedThisGame++; addDiamonds(1); }
-                if (bonusType === 'rainbow') { rainbowsCreatedThisGame++; addDiamonds(2); }
-                if (bonusType === 'striped-h' || bonusType === 'striped-v') { stripesCreatedThisGame++; }
-                // Show toast
-                if (!messageShown) {
-                    if (bonusType === 'bomb') showMessage('💣 Бомба!');
-                    else if (bonusType === 'rainbow') showMessage('🌈 Радуга!');
-                    else if (bonusType === 'striped-v') showMessage('⬇️ Ракета в столбец!');
-                    else if (bonusType === 'striped-h') showMessage('➡️ Ракета в ряд!');
-                    messageShown = true;
+            matchScore += baseScore;
+
+            for (const cell of match.cells) {
+                if (matchLength < 4 || cell.row !== centerCell.row || cell.col !== centerCell.col) {
+                    allMatchedCells.add(`${cell.row},${cell.col}`);
+                    spawnMatchParticles(cell.row, cell.col, board[cell.row] && board[cell.row][cell.col] && board[cell.row][cell.col].type);
                 }
             }
 
-            // Add match cells to removal set (except the cell where bonus will be)
-            for (const cell of match.cells) {
-                const k = cell.row + ',' + cell.col;
-                if (!createdBonusMap.has(k)) {
-                    allMatchedCells.add(k);
-                }
+            if (createdBonus) {
+                createdBonuses.push({ row: centerCell.row, col: centerCell.col, bonus: createdBonus });
             }
         }
 
-        // Cascade: bonuses that are inside matched region → trigger them
-        let changed = true;
-        let safety = 0;
-        while (changed && safety < 8) {
-            changed = false;
-            safety++;
-            const current = Array.from(allMatchedCells);
-            for (const key of current) {
-                const [r, c] = key.split(',').map(Number);
-                const tile = board[r][c];
-                if (!tile || !tile.bonus) continue;
-                const b = tile.bonus;
-                if (b === 'striped-h' || b === 'striped-v' || b === 'bomb') {
-                    const before = allMatchedCells.size;
-                    collectCellsForBonus(b, r, c, allMatchedCells, false);
-                    if (allMatchedCells.size > before) {
-                        changed = true;
-                        if (b === 'striped-h') { showSweepRow(r); playSoundStriped(); }
-                        if (b === 'striped-v') { showSweepCol(c); playSoundStriped(); }
-                        if (b === 'bomb') { spawnBombParticles(r, c); playSoundBomb(); matchScore += 120; }
-                    }
-                } else if (b === 'rainbow') {
-                    // pick type from an adjacent matched tile, fallback random
-                    let targetType = null;
-                    for (let dr = -1; dr <= 1 && !targetType; dr++) {
-                        for (let dc = -1; dc <= 1 && !targetType; dc++) {
-                            const nr = r + dr, nc = c + dc;
-                            if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE) {
-                                const t = board[nr][nc];
-                                if (t && t.bonus !== 'rainbow') targetType = t.type;
-                            }
-                        }
-                    }
-                    if (!targetType) targetType = FRUIT_TYPES[Math.floor(Math.random() * FRUIT_TYPES.length)];
-                    for (let rr = 0; rr < BOARD_SIZE; rr++) {
-                        for (let cc = 0; cc < BOARD_SIZE; cc++) {
-                            const tt = board[rr][cc];
-                            if (tt && tt.type === targetType && tt.bonus !== 'rainbow') {
-                                if (!allMatchedCells.has(rr + ',' + cc) && !createdBonusMap.has(rr + ',' + cc)) {
-                                    allMatchedCells.add(rr + ',' + cc);
-                                    changed = true;
-                                }
-                            }
-                        }
-                    }
-                    spawnRainbowParticles(r, c);
-                    playSoundRainbow();
-                    matchScore += 250;
-                }
-            }
-        }
-
-        // Combo multiplier
         const comboMultiplier = comboCount >= 5 ? 5 : comboCount >= 3 ? 3 : comboCount >= 2 ? 2 : 1;
-        matchScore = Math.round(matchScore * comboMultiplier);
+        matchScore *= comboMultiplier;
         score += matchScore;
         updateScoreDisplay();
+
+        if (createdBonuses.length > 0) {
+            playSoundMatch();
+            if (createdBonuses.some(b => b.bonus === 'bomb')) {
+                showMessage('💣 Бомба! Совмести 3 фрукта того же вида, чтобы взорвать');
+            }
+        }
 
         if (comboMultiplier > 1) {
             showComboIndicator(comboMultiplier);
             playSoundCombo(comboMultiplier);
-        } else {
+        } else if (createdBonuses.length === 0) {
             playSoundMatch();
         }
 
-        // Visual: animate matched cells with matched class
+        const bonusCells = [];
         allMatchedCells.forEach(key => {
             const [row, col] = key.split(',').map(Number);
-            const cell = matrixCells[row] && matrixCells[row][col];
-            if (cell) {
-                cell.classList.remove('matched');
-                void cell.offsetWidth;
-                cell.classList.add('matched');
+            if (board[row][col] && board[row][col].bonus) {
+                bonusCells.push({ row, col, bonus: board[row][col].bonus });
             }
         });
-        // Bonus cells being replaced also get explode
-        createdBonusMap.forEach((_b, key) => {
+
+        for (const bonusCell of bonusCells) {
+            if (bonusCell.bonus === 'bomb') {
+                for (let r = bonusCell.row - 1; r <= bonusCell.row + 1; r++) {
+                    for (let c = bonusCell.col - 1; c <= bonusCell.col + 1; c++) {
+                        if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
+                            allMatchedCells.add(`${r},${c}`);
+                        }
+                    }
+                }
+                spawnBombParticles(bonusCell.row, bonusCell.col);
+                score += 20;
+                playSoundBomb();
+            } else if (bonusCell.bonus === 'rainbow') {
+                const targetType = FRUIT_TYPES[Math.floor(Math.random() * FRUIT_TYPES.length)];
+                for (let r = 0; r < BOARD_SIZE; r++) {
+                    for (let c = 0; c < BOARD_SIZE; c++) {
+                        if (board[r][c] && board[r][c].type === targetType && !board[r][c].bonus) {
+                            allMatchedCells.add(`${r},${c}`);
+                            spawnMatchParticles(r, c, targetType);
+                        }
+                    }
+                }
+                spawnRainbowParticles(bonusCell.row, bonusCell.col);
+                score += 50;
+                playSoundRainbow();
+            }
+        }
+
+        updateScoreDisplay();
+
+        allMatchedCells.forEach(key => {
             const [row, col] = key.split(',').map(Number);
-            const cell = matrixCells[row] && matrixCells[row][col];
-            if (cell) {
-                cell.classList.remove('matched');
-                void cell.offsetWidth;
-                cell.classList.add('explode');
+            const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+            if (cell && cell.querySelector('.fruit')) {
+                cell.classList.add('matched');
             }
         });
 
         await sleep(300);
 
-        // Apply removal and bonus creation to board model
         allMatchedCells.forEach(key => {
             const [row, col] = key.split(',').map(Number);
             board[row][col] = null;
         });
-        createdBonusMap.forEach((val, key) => {
-            const [row, col] = key.split(',').map(Number);
-            board[row][col] = { type: val.type, bonus: val.bonus };
-        });
 
-        // Drop & fill with animations
         await dropFruits();
         await fillEmptySpaces();
 
-        // Update visuals for all changed cells (without full re-render where possible)
         renderBoard();
-        await sleep(120);
+        await sleep(150);
 
         matches = findMatches();
     }
 
     updateScoreDisplay();
-    resetHintTimer();
 }
 
 async function dropFruits() {
@@ -2541,35 +2155,23 @@ async function dropFruits() {
     }
 
     if (drops.length > 0) {
-        // 1. Animate tiles moving from source pos to target pos (without re-render!)
-        const movedTargets = new Set();
+        renderBoard();
         for (const drop of drops) {
-            const cell = matrixCells[drop.fromRow] && matrixCells[drop.fromRow][drop.col];
+            const cell = matrixCells[drop.toRow][drop.col];
             if (cell && cell.querySelector('.fruit')) {
-                const distance = (drop.toRow - drop.fromRow);
-                cell.querySelector('.fruit').style.transition = 'transform 0.32s cubic-bezier(.5,.9,.4,1.1)';
-                cell.querySelector('.fruit').style.transform = `translateY(${distance * 100}%)`;
+                const distance = (drop.fromRow - drop.toRow) * 100;
+                cell.querySelector('.fruit').style.transition = 'transform 0.3s ease-out';
+                cell.querySelector('.fruit').style.transform = `translateY(-${distance}%)`;
             }
-            movedTargets.add(drop.toRow + ',' + drop.col);
         }
-        await sleep(320);
-
-        // 2. Sync DOM to model: update the cells at TARGET positions (since source now null)
+        await sleep(30);
         for (const drop of drops) {
-            // Update target cell visual
-            updateCellVisual(drop.toRow, drop.col);
-            // And the source cell (now null)
-            updateCellVisual(drop.fromRow, drop.col);
-            // Apply bounce class to target fruit
-            const tCell = matrixCells[drop.toRow][drop.col];
-            const tf = tCell && tCell.querySelector('.fruit');
-            if (tf) {
-                tf.classList.remove('dropped');
-                void tf.offsetWidth; // reflow to restart animation
-                tf.classList.add('dropped');
+            const cell = matrixCells[drop.toRow][drop.col];
+            if (cell && cell.querySelector('.fruit')) {
+                cell.querySelector('.fruit').style.transform = 'translateY(0)';
             }
         }
-        await sleep(280);
+        await sleep(300);
     }
 }
 
@@ -2586,37 +2188,22 @@ async function fillEmptySpaces() {
     }
 
     if (newFruits.length > 0) {
-        // First: create DOM nodes at each empty cell WITHOUT spawn animation (pre-translate top)
-        for (const fruit of newFruits) {
-            updateCellVisual(fruit.row, fruit.col);
-            const cell = matrixCells[fruit.row][fruit.col];
-            const frDiv = cell && cell.querySelector('.fruit');
-            if (frDiv) {
-                frDiv.style.transition = 'none';
-                frDiv.style.transform = 'translateY(-450%)';
-            }
-        }
-        await sleep(20);
-        // Now animate into place
+        renderBoard();
         for (const fruit of newFruits) {
             const cell = matrixCells[fruit.row][fruit.col];
-            const frDiv = cell && cell.querySelector('.fruit');
-            if (frDiv) {
-                frDiv.style.transition = 'transform 0.36s cubic-bezier(.25,1.4,.4,1)';
-                frDiv.style.transform = 'translateY(0)';
-                frDiv.addEventListener('transitionend', function onEnd(e) {
-                    if (e.propertyName !== 'transform') return;
-                    frDiv.removeEventListener('transitionend', onEnd);
-                    frDiv.style.transition = '';
-                    frDiv.style.transform = '';
-                    // Apply spawn-bounce class (pop at end)
-                    frDiv.classList.remove('spawned');
-                    void frDiv.offsetWidth;
-                    frDiv.classList.add('spawned');
-                });
+            if (cell && cell.querySelector('.fruit')) {
+                cell.querySelector('.fruit').style.transition = 'transform 0.4s ease-out';
+                cell.querySelector('.fruit').style.transform = 'translateY(-300%)';
             }
         }
-        await sleep(390);
+        await sleep(30);
+        for (const fruit of newFruits) {
+            const cell = matrixCells[fruit.row][fruit.col];
+            if (cell && cell.querySelector('.fruit')) {
+                cell.querySelector('.fruit').style.transform = 'translateY(0)';
+            }
+        }
+        await sleep(400);
     }
 }
 
@@ -2851,9 +2438,6 @@ async function handleBoosterBoardClick(row, col) {
         } else {
             for (let c = 0; c < BOARD_SIZE; c++) cells.push({ row, col: c });
             for (let r = 0; r < BOARD_SIZE; r++) if (r !== row) cells.push({ row: r, col });
-            showSweepRow(row);
-            showSweepCol(col);
-            playSoundStriped();
         }
         const bonusScore = activeBooster === 'hammer' ? 10 : 45;
         const boosterId = activeBooster;
@@ -2866,17 +2450,15 @@ async function handleBoosterBoardClick(row, col) {
         score += bonusScore;
         updateScoreDisplay();
         isProcessing = false;
-        resetHintTimer();
         if (!hasValidMoves() && !gameOverShown && !isPaused) await shuffleBoard();
     }
 }
 
 async function clearCellsAndCascade(cells) {
     cells.forEach(({ row, col }) => {
-        const cellEl = matrixCells[row] && matrixCells[row][col];
+        const cellEl = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
         if (cellEl && cellEl.querySelector('.fruit')) {
             cellEl.classList.add('matched');
-            spawnScorePopup(row, col, 60);
         }
     });
     await sleep(280);
@@ -3207,9 +2789,7 @@ diamondPayBtns.forEach(btn => {
 purchaseBar.addEventListener('click', (e) => { e.stopPropagation(); });
 
 gameBoard.addEventListener('touchstart', handleTouchStart, { passive: true });
-gameBoard.addEventListener('touchmove', handleTouchMove, { passive: true });
 gameBoard.addEventListener('touchend', handleTouchEnd, { passive: true });
-gameBoard.addEventListener('touchcancel', handleTouchEnd, { passive: true });
 
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden' || document.hidden) {

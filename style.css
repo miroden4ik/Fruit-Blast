@@ -287,36 +287,10 @@ body {
         transform: translateY(-100%);
         opacity: 0;
     }
-    78% {
-        transform: translateY(4%);
-        opacity: 1;
-    }
-    90% {
-        transform: translateY(-2%);
-    }
     100% {
         transform: translateY(0);
         opacity: 1;
     }
-}
-
-/* Bounce animation for dropped tiles */
-.fruit.dropped {
-    animation: drop-bounce 0.28s cubic-bezier(.25,1.4,.4,1) both;
-}
-@keyframes drop-bounce {
-    0%   { transform: translateY(-2%) scale(1,1); }
-    60%  { transform: translateY(4%) scale(0.96,1.04); }
-    100% { transform: translateY(0) scale(1,1); }
-}
-
-.fruit.spawned {
-    animation: spawn-in 0.32s cubic-bezier(.25,1.4,.4,1) both;
-}
-@keyframes spawn-in {
-    0%   { transform: scale(0.2) rotate(-20deg); opacity: 0; }
-    60%  { transform: scale(1.08) rotate(2deg); opacity: 1; }
-    100% { transform: scale(1) rotate(0); opacity: 1; }
 }
 
 @keyframes modal-pop {
@@ -371,151 +345,23 @@ body {
 /* Bonus fruit styles */
 .cell.bomb {
     background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
-    animation: bomb-pulse 1s ease-in-out infinite;
-}
-
-@keyframes bomb-pulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.6); }
-    50% { box-shadow: 0 0 0 6px rgba(255, 107, 107, 0); }
-}
-
-/* Striped (rocket) bonuses */
-.cell.striped-h {
-    background: linear-gradient(180deg, rgba(255,255,255,0.45) 0%, transparent 25%, transparent 50%, rgba(255,255,255,0.45) 50%, transparent 75%, transparent 100%);
-    background-size: 100% 10px;
-    animation: striped-h-move 0.5s linear infinite;
-}
-
-@keyframes striped-h-move {
-    from { background-position: 0 0; }
-    to { background-position: 0 10px; }
-}
-
-.cell.striped-v {
-    background: linear-gradient(90deg, rgba(255,255,255,0.45) 0%, transparent 25%, transparent 50%, rgba(255,255,255,0.45) 50%, transparent 75%, transparent 100%);
-    background-size: 10px 100%;
-    animation: striped-v-move 0.5s linear infinite;
-}
-
-@keyframes striped-v-move {
-    from { background-position: 0 0; }
-    to { background-position: 10px 0; }
-}
-
-.striped-badge {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 22px;
-    z-index: 2;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
-    pointer-events: none;
-    opacity: 0.9;
+    animation: pulse 1s ease-in-out infinite;
 }
 
 .bomb-badge {
     position: absolute;
-    top: -2px;
-    right: -2px;
-    font-size: 17px;
+    top: -4px;
+    right: -4px;
+    font-size: 15px;
     z-index: 2;
-    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
     pointer-events: none;
-    animation: badge-bounce 0.8s ease-in-out infinite;
-}
-
-@keyframes badge-bounce {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.15); }
 }
 
 .cell.rainbow {
     background: linear-gradient(135deg, #FF6B6B, #FFE66D, #4ECDC4, #667eea, #764ba2);
     background-size: 300% 300%;
     animation: rainbow-shift 2s ease infinite;
-}
-
-/* Hint (possible move) */
-.cell.hint {
-    animation: hint-pulse 0.9s ease-in-out infinite;
-    z-index: 3;
-}
-
-@keyframes hint-pulse {
-    0%, 100% {
-        transform: scale(1);
-        box-shadow: 0 0 0 0 rgba(78, 205, 196, 0.7);
-    }
-    50% {
-        transform: scale(1.12);
-        box-shadow: 0 0 0 8px rgba(78, 205, 196, 0);
-    }
-}
-
-/* Shake for invalid swap */
-.cell.shake {
-    animation: cell-shake 0.35s ease-in-out;
-}
-
-@keyframes cell-shake {
-    0%, 100% { transform: translateX(0); }
-    20% { transform: translateX(-6px); }
-    40% { transform: translateX(6px); }
-    60% { transform: translateX(-4px); }
-    80% { transform: translateX(4px); }
-}
-
-/* Explosion flash */
-.cell.explode {
-    animation: explode-flash 0.4s ease-out forwards;
-    z-index: 10;
-}
-
-@keyframes explode-flash {
-    0% { transform: scale(1); filter: brightness(1); }
-    40% { transform: scale(1.4); filter: brightness(2.5); }
-    100% { transform: scale(0); opacity: 0; }
-}
-
-/* Score popup floating text */
-.score-popup {
-    position: absolute;
-    font-weight: 900;
-    font-size: 20px;
-    color: #fff;
-    text-shadow: 0 2px 6px rgba(0,0,0,0.45), 0 0 4px rgba(255,230,109,0.85);
-    pointer-events: none;
-    z-index: 70;
-    animation: score-rise 0.95s ease-out forwards;
-    white-space: nowrap;
-}
-
-@keyframes score-rise {
-    0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
-    22% { transform: translate(-50%, -62%) scale(1.25); opacity: 1; }
-    65% { transform: translate(-50%, -95%) scale(1); opacity: 1; }
-    100% { transform: translate(-50%, -140%) scale(0.8); opacity: 0; }
-}
-
-/* Row/Column clear sweep */
-.sweep-row, .sweep-col {
-    position: absolute;
-    background: linear-gradient(90deg, transparent, rgba(255,230,109,0.95), transparent);
-    pointer-events: none;
-    z-index: 40;
-    border-radius: 4px;
-    animation: sweep-pass 0.5s ease-out;
-}
-
-.sweep-col {
-    background: linear-gradient(180deg, transparent, rgba(255,230,109,0.95), transparent);
-}
-
-@keyframes sweep-pass {
-    0% { opacity: 0; }
-    30% { opacity: 1; }
-    100% { opacity: 0; }
 }
 
 @keyframes rainbow-shift {
