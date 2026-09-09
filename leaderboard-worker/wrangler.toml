@@ -1,0 +1,7 @@
+name = "fruit-blast-leaderboard"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+kv_namespaces = [
+  { binding = "FRUIT_BLAST_LB", id = "470a9b35743c4efc99423aa7776f35b2", preview_id = "470a9b35743c4efc99423aa7776f35b2" }
+]
