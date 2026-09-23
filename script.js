@@ -696,13 +696,6 @@ let lastTimerTick = 0;
 let savedGame = null; // автосохранённое состояние (время, счёт, доска)
 let helpResumesOnClose = false;
 
-// ===== LIVES =====
-const MAX_LIVES = 5;
-const LIFE_REGEN_MS = 30 * 60 * 1000; // 30 минут на 1 жизнь
-let lives = MAX_LIVES;
-let lastLifeLostAt = 0; // timestamp когда потеряли жизнь
-let lifeRegenTimerId = null;
-
 // ===== HINT SYSTEM =====
 let hintTimeoutId = null;
 let hintCells = null;
@@ -778,8 +771,8 @@ const helpCloseBtn = document.getElementById('help-close-btn');
 const statsBtn = document.getElementById('stats-btn');
 const tasksBtn = document.getElementById('tasks-btn');
 const dailyTasksCount = document.getElementById('daily-tasks-count');
-const livesContainer = document.getElementById('lives-container');
-const livesDisplay = document.getElementById('lives-display');
+const livesContainer = null;
+const livesDisplay = null;
 
 // ===== VK STORAGE / PLAYER =====
 function getSoundSetting(defaultVal) {
@@ -998,14 +991,6 @@ function loseLife() {
         return true; // game over
     }
     return false;
-}
-
-function initLives() {
-    const stored = getLivesFromStorage();
-    lives = stored.lives;
-    lastLifeLostAt = stored.lastLost;
-    updateLivesDisplay();
-    startLifeRegenTimer();
 }
 
 function endGameByTime() {

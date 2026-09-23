@@ -757,34 +757,7 @@ body {
     margin-left: 10px;
 }
 
-/* ===== Lives ===== */
-.lives-value {
-    font-size: 20px;
-    white-space: nowrap;
-    letter-spacing: 2px;
-}
-
-.lives-low {
-    animation: lives-pulse 0.8s ease-in-out infinite;
-}
-
-@keyframes lives-pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(0.9); }
-}
-
-.score-container.lives-score {
-    background: linear-gradient(135deg, #E74C3C 0%, #C0392B 100%);
-    box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
-}
-
-@media (max-width: 480px) {
-    .lives-value {
-        font-size: 16px;
-    }
-}
-
-/* ===== Diamond Score ===== */
+/* ===== Diamonds in header ===== */
 .diamond-score .diamond-value {
     font-size: 20px;
     white-space: nowrap;
@@ -851,16 +824,6 @@ body {
     justify-content: center;
     align-items: center;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-}
-
-.boost-panel-diamonds {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 50px;
-    font-size: 18px;
-    font-weight: 700;
-    color: #667eea;
 }
 
 /* ===== Store modal ===== */
