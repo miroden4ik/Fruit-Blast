@@ -120,6 +120,15 @@ body {
     box-shadow: 0 0 15px rgba(255, 230, 109, 0.6);
 }
 
+.cell.hint {
+    animation: hint-pulse 0.7s ease-in-out infinite;
+}
+
+@keyframes hint-pulse {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(255, 230, 109, 0.4); }
+    50% { box-shadow: 0 0 0 6px rgba(255, 230, 109, 0.9); }
+}
+
 .cell.matched {
     animation: match-pop 0.3s ease-out forwards;
 }
@@ -421,6 +430,27 @@ body {
     background: linear-gradient(135deg, #FF6B6B, #FFE66D, #4ECDC4, #667eea, #764ba2);
     background-size: 300% 300%;
     animation: rainbow-shift 2s ease infinite;
+}
+
+.cell.star {
+    background: linear-gradient(135deg, #FFD700, #FFFACD, #FFA500);
+    background-size: 200% 200%;
+    animation: star-glow 1s ease-in-out infinite;
+}
+
+.star-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    font-size: 15px;
+    z-index: 2;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+    pointer-events: none;
+}
+
+@keyframes star-glow {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
 }
 
 @keyframes rainbow-shift {
@@ -727,7 +757,34 @@ body {
     margin-left: 10px;
 }
 
-/* ===== Diamonds in header ===== */
+/* ===== Lives ===== */
+.lives-value {
+    font-size: 20px;
+    white-space: nowrap;
+    letter-spacing: 2px;
+}
+
+.lives-low {
+    animation: lives-pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes lives-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.9); }
+}
+
+.score-container.lives-score {
+    background: linear-gradient(135deg, #E74C3C 0%, #C0392B 100%);
+    box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+}
+
+@media (max-width: 480px) {
+    .lives-value {
+        font-size: 16px;
+    }
+}
+
+/* ===== Diamond Score ===== */
 .diamond-score .diamond-value {
     font-size: 20px;
     white-space: nowrap;
@@ -794,6 +851,16 @@ body {
     justify-content: center;
     align-items: center;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.boost-panel-diamonds {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 50px;
+    font-size: 18px;
+    font-weight: 700;
+    color: #667eea;
 }
 
 /* ===== Store modal ===== */

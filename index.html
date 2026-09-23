@@ -41,9 +41,9 @@
                 <div class="score-label">ЛУЧШИЙ</div>
                 <div class="score-value" id="best-score">0</div>
             </div>
-            <div class="score-container diamond-score">
-                <div class="score-label">АЛМАЗЫ</div>
-                <div class="score-value diamond-value" id="diamonds-count">💎 0</div>
+            <div class="score-container" id="lives-container">
+                <div class="score-label">ЖИЗНИ</div>
+                <div class="score-value lives-value" id="lives-display">❤️❤️❤️❤️❤️</div>
             </div>
         </header>
 
@@ -108,6 +108,9 @@
                 <span class="boost-icon">🔄</span>
                 <span class="boost-count" id="count-swap">0</span>
             </button>
+            <div class="boost-panel-diamonds">
+                <span id="diamonds-count">💎 0</span>
+            </div>
         </div>
 
         <div class="game-over-modal" id="game-over-modal">
@@ -126,7 +129,7 @@
                     <div class="modal-stat"><div class="modal-stat-value" id="stat-diamonds">💎 0</div><div class="modal-stat-label">алмазов</div></div>
                     <div class="modal-stat"><div class="modal-stat-value" id="stat-combo">x0</div><div class="modal-stat-label">макс. комбо</div></div>
                     <div class="modal-stat"><div class="modal-stat-value" id="stat-matches">0</div><div class="modal-stat-label">совпадений</div></div>
-                    <div class="modal-stat"><div class="modal-stat-value" id="stat-bombs">0</div><div class="modal-stat-label">бомб</div></div>
+                    <div class="modal-stat"><div class="modal-stat-value" id="stat-stars">0</div><div class="modal-stat-label">звёзд</div></div>
                 </div>
                 <button class="game-btn share-btn-in-modal" id="share-gameover-btn">📣 ПОДЕЛИТЬСЯ</button>
                 <button class="play-again-btn" id="play-again-btn">ИГРАТЬ СНОВА</button>

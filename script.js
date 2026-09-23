@@ -12,7 +12,8 @@ const FRUIT_SVG = {
 
 const BONUS_SVG = {
     bomb: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><circle cx="32" cy="32" r="20" fill="#2C3E50"/><circle cx="32" cy="32" r="16" fill="#E74C3C"/><text x="32" y="39" text-anchor="middle" fill="white" font-size="22" font-weight="bold">💣</text></svg>`,
-    rainbow: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="{ID}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#FF6B6B"/><stop offset="20%" style="stop-color:#FFE66D"/><stop offset="40%" style="stop-color:#4ECDC4"/><stop offset="60%" style="stop-color:#667eea"/><stop offset="80%" style="stop-color:#764ba2"/><stop offset="100%" style="stop-color:#FF6B6B"/></linearGradient></defs><circle cx="32" cy="32" r="22" fill="url(#{ID})"/><text x="32" y="40" text-anchor="middle" fill="white" font-size="24" font-weight="bold">🌈</text></svg>`
+    rainbow: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="{ID}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#FF6B6B"/><stop offset="20%" style="stop-color:#FFE66D"/><stop offset="40%" style="stop-color:#4ECDC4"/><stop offset="60%" style="stop-color:#667eea"/><stop offset="80%" style="stop-color:#764ba2"/><stop offset="100%" style="stop-color:#FF6B6B"/></linearGradient></defs><circle cx="32" cy="32" r="22" fill="url(#{ID})"/><text x="32" y="40" text-anchor="middle" fill="white" font-size="24" font-weight="bold">🌈</text></svg>`,
+    star: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="{ID}" cx="50%" cy="50%" r="50%"><stop offset="0%" style="stop-color:#FFFACD"/><stop offset="50%" style="stop-color:#FFD700"/><stop offset="100%" style="stop-color:#FF8C00"/></radialGradient></defs><polygon points="32,4 38,24 60,24 42,38 50,60 32,46 14,60 22,38 4,24 26,24" fill="url(#{ID})" stroke="#FF8C00" stroke-width="2"/><circle cx="32" cy="32" r="10" fill="#FFFACD" opacity="0.6"/></svg>`
 };
 
 const FRUIT_TYPES = Object.keys(FRUIT_SVG);
@@ -683,6 +684,7 @@ let gamesPlayedThisSession = 0;
 let matchesThisGame = 0;
 let bombsCreatedThisGame = 0;
 let rainbowsCreatedThisGame = 0;
+let starsCreatedThisGame = 0;
 let comboHitsThisGame = 0;
 let newRecordThisGame = false;
 
@@ -693,6 +695,18 @@ let gameTimerInterval = null;
 let lastTimerTick = 0;
 let savedGame = null; // автосохранённое состояние (время, счёт, доска)
 let helpResumesOnClose = false;
+
+// ===== LIVES =====
+const MAX_LIVES = 5;
+const LIFE_REGEN_MS = 30 * 60 * 1000; // 30 минут на 1 жизнь
+let lives = MAX_LIVES;
+let lastLifeLostAt = 0; // timestamp когда потеряли жизнь
+let lifeRegenTimerId = null;
+
+// ===== HINT SYSTEM =====
+let hintTimeoutId = null;
+let hintCells = null;
+const HINT_DELAY_MS = 5000;
 
 // ===== DOM =====
 const gameContainer = document.querySelector('.game-container');
@@ -707,6 +721,7 @@ const statDiamonds = document.getElementById('stat-diamonds');
 const statCombo = document.getElementById('stat-combo');
 const statMatches = document.getElementById('stat-matches');
 const statBombs = document.getElementById('stat-bombs');
+const statStars = document.getElementById('stat-stars');
 const shareGameoverBtn = document.getElementById('share-gameover-btn');
 const pauseModal = document.getElementById('pause-modal');
 const leaderboardModal = document.getElementById('leaderboard-modal');
@@ -763,6 +778,8 @@ const helpCloseBtn = document.getElementById('help-close-btn');
 const statsBtn = document.getElementById('stats-btn');
 const tasksBtn = document.getElementById('tasks-btn');
 const dailyTasksCount = document.getElementById('daily-tasks-count');
+const livesContainer = document.getElementById('lives-container');
+const livesDisplay = document.getElementById('lives-display');
 
 // ===== VK STORAGE / PLAYER =====
 function getSoundSetting(defaultVal) {
@@ -917,6 +934,80 @@ function stopGameTimer() {
     }
 }
 
+// ===== LIVES =====
+function getLivesFromStorage() {
+    try {
+        const raw = localStorage.getItem('fruitBlastLives');
+        if (raw) {
+            const data = JSON.parse(raw);
+            return {
+                lives: Math.max(0, Math.min(MAX_LIVES, Number(data.lives) || MAX_LIVES)),
+                lastLost: Number(data.lastLost) || 0
+            };
+        }
+    } catch (e) {}
+    return { lives: MAX_LIVES, lastLost: 0 };
+}
+
+function saveLivesToStorage() {
+    try {
+        localStorage.setItem('fruitBlastLives', JSON.stringify({
+            lives: lives,
+            lastLost: lastLifeLostAt
+        }));
+    } catch (e) {}
+}
+
+function updateLivesDisplay() {
+    if (!livesDisplay) return;
+    const hearts = '❤️'.repeat(lives) + '🖤'.repeat(MAX_LIVES - lives);
+    livesDisplay.textContent = hearts;
+    livesDisplay.classList.toggle('lives-low', lives === 1);
+}
+
+function startLifeRegenTimer() {
+    if (lifeRegenTimerId) clearInterval(lifeRegenTimerId);
+    lifeRegenTimerId = setInterval(() => {
+        if (lives >= MAX_LIVES) return;
+        const now = Date.now();
+        const elapsed = now - lastLifeLostAt;
+        const regenInterval = LIFE_REGEN_MS;
+        if (elapsed >= regenInterval) {
+            const oldLives = lives;
+            lives = Math.min(MAX_LIVES, lives + 1);
+            if (lives !== oldLives) {
+                lastLifeLostAt = lives >= MAX_LIVES ? 0 : lastLifeLostAt + regenInterval;
+                saveLivesToStorage();
+                updateLivesDisplay();
+                if (lives > 0 && lives < MAX_LIVES) {
+                    showMessage('❤️ +1 жизнь восстановлена');
+                }
+            }
+        }
+    }, 10000);
+}
+
+function loseLife() {
+    if (lives <= 0) return false;
+    lives--;
+    lastLifeLostAt = Date.now();
+    saveLivesToStorage();
+    updateLivesDisplay();
+    startLifeRegenTimer();
+    if (lives === 0) {
+        return true; // game over
+    }
+    return false;
+}
+
+function initLives() {
+    const stored = getLivesFromStorage();
+    lives = stored.lives;
+    lastLifeLostAt = stored.lastLost;
+    updateLivesDisplay();
+    startLifeRegenTimer();
+}
+
 function endGameByTime() {
     stopGameTimer();
     stopLeaderboardRealtimeSync();
@@ -939,7 +1030,7 @@ function endGameByTime() {
     statDiamonds.textContent = '💎 ' + diamondsEarnedThisGame;
     statCombo.textContent = 'x' + bestComboThisGame;
     statMatches.textContent = matchesThisGame;
-    statBombs.textContent = bombsCreatedThisGame;
+    statStars.textContent = starsCreatedThisGame;
     gameOverModal.classList.add('active');
     pauseModal.classList.remove('active');
     updateDailyTasksBadge();
@@ -1214,6 +1305,21 @@ function spawnRainbowParticles(row, col) {
         const c = colors[Math.floor(Math.random() * colors.length)];
         spawnParticles(row, col, c, 1, 35, [3, 7]);
     }
+}
+
+function spawnStarParticles(row, col) {
+    const colors = ['#FFD700', '#FFFACD', '#FFA500', '#FFFF00', '#FFE66D'];
+    for (let i = 0; i < 6; i++) {
+        const c = colors[Math.floor(Math.random() * colors.length)];
+        spawnParticles(row, col, c, 1, 40, [4, 9]);
+    }
+}
+
+function playSoundStar() {
+    [0, 60, 120, 180, 240, 300].forEach((d, i) => {
+        tone(880 + i * 80, 0.12, 'sine', 0.4, d / 1000);
+    });
+    tone(1200, 0.2, 'triangle', 0.3, 0.3);
 }
 
 function spawnComboParticles(level) {
@@ -1541,6 +1647,8 @@ function initGame() {
     pauseModal.classList.remove('active');
     startGameTimer();
 
+    resetHintTimer();
+
     if (bestScore > 0 && bestScoreLoaded) {
         setTimeout(() => submitLeaderboard(bestScore), 1500);
     }
@@ -1597,6 +1705,9 @@ function renderBoard() {
                 } else if (fruitData.bonus === 'rainbow') {
                     fruitDiv.innerHTML = bonusSvgHtml('rainbow', id);
                     cell.classList.add('rainbow');
+                } else if (fruitData.bonus === 'star') {
+                    fruitDiv.innerHTML = bonusSvgHtml('star', id);
+                    cell.classList.add('star');
                 } else {
                     fruitDiv.innerHTML = fruitSvgHtml(fruitData.type, id);
                 }
@@ -1625,6 +1736,7 @@ function handleCellClick(e) {
 
     initAudio();
     playSoundSelect();
+    resetHintTimer();
 
     if (selectedCell === null) {
         selectedCell = { row, col };
@@ -1816,6 +1928,7 @@ async function swapFruits(cell1, cell2) {
     }
 
     isProcessing = false;
+    resetHintTimer();
 
     if (!hasValidMoves() && !gameOverShown && !isPaused) {
         await shuffleBoard();
@@ -1888,12 +2001,52 @@ function checkVerticalMatch(row, col) {
     return match;
 }
 
+// Find L/T/T-shapes: when horizontal and vertical matches share a cell and total >= 5 fruits
+function findLTForms(allMatches) {
+    const ltForms = [];
+    if (allMatches.length < 2) return ltForms;
+
+    for (let i = 0; i < allMatches.length; i++) {
+        for (let j = i + 1; j < allMatches.length; j++) {
+            const m1 = allMatches[i];
+            const m2 = allMatches[j];
+
+            if (m1.direction === m2.direction) continue;
+
+            const m1Keys = new Set(m1.cells.map(c => c.row + ',' + c.col));
+            const intersection = m2.cells.filter(c => m1Keys.has(c.row + ',' + c.col));
+
+            if (intersection.length === 0) continue;
+
+            const totalCells = m1.cells.length + m2.cells.length - intersection.length;
+            if (totalCells < 5) continue;
+
+            const ltCells = [];
+            const seen = new Set();
+            m1.cells.forEach(c => { const k = c.row + ',' + c.col; if (!seen.has(k)) { seen.add(k); ltCells.push(c); } });
+            m2.cells.forEach(c => { const k = c.row + ',' + c.col; if (!seen.has(k)) { seen.add(k); ltCells.push(c); } });
+
+            ltForms.push({
+                cells: ltCells,
+                center: intersection[0],
+                totalLength: totalCells
+            });
+        }
+    }
+    return ltForms;
+}
+
 // ===== PROCESS MATCHES =====
 async function processMatches() {
     let matches = findMatches();
 
     while (matches.length > 0) {
         comboCount++;
+
+        // Find L/T forms before processing (for star creation)
+        const ltForms = findLTForms(matches);
+        const ltCenters = new Set(ltForms.map(lt => lt.center.row + ',' + lt.center.col));
+
         let matchScore = 0;
         const allMatchedCells = new Set();
         let createdBonuses = [];
@@ -1915,10 +2068,18 @@ async function processMatches() {
                 addDiamonds(1);
             } else if (matchLength >= 5) {
                 baseScore = 100;
-                board[centerCell.row][centerCell.col] = { type: 'rainbow', bonus: 'rainbow' };
-                createdBonus = 'rainbow';
-                rainbowsCreatedThisGame++;
-                addDiamonds(2);
+                // L/T center becomes star, otherwise rainbow
+                if (ltCenters.has(centerCell.row + ',' + centerCell.col)) {
+                    board[centerCell.row][centerCell.col] = { type: 'star', bonus: 'star' };
+                    createdBonus = 'star';
+                    starsCreatedThisGame++;
+                    addDiamonds(3);
+                } else {
+                    board[centerCell.row][centerCell.col] = { type: 'rainbow', bonus: 'rainbow' };
+                    createdBonus = 'rainbow';
+                    rainbowsCreatedThisGame++;
+                    addDiamonds(2);
+                }
             }
 
             matchScore += baseScore;
@@ -1944,6 +2105,9 @@ async function processMatches() {
             playSoundMatch();
             if (createdBonuses.some(b => b.bonus === 'bomb')) {
                 showMessage('💣 Бомба! Совмести 3 фрукта того же вида, чтобы взорвать');
+            }
+            if (createdBonuses.some(b => b.bonus === 'star')) {
+                showMessage('⭐ Звезда! Взрывает ряд и колонку!');
             }
         }
 
@@ -1987,6 +2151,21 @@ async function processMatches() {
                 spawnRainbowParticles(bonusCell.row, bonusCell.col);
                 score += 50;
                 playSoundRainbow();
+            } else if (bonusCell.bonus === 'star') {
+                // Star explodes entire row AND column
+                for (let c = 0; c < BOARD_SIZE; c++) {
+                    allMatchedCells.add(`${bonusCell.row},${c}`);
+                    spawnStarParticles(bonusCell.row, c);
+                }
+                for (let r = 0; r < BOARD_SIZE; r++) {
+                    if (r !== bonusCell.row) {
+                        allMatchedCells.add(`${r},${bonusCell.col}`);
+                        spawnStarParticles(r, bonusCell.col);
+                    }
+                }
+                spawnStarParticles(bonusCell.row, bonusCell.col);
+                score += 80;
+                playSoundStar();
             }
         }
 
@@ -2139,6 +2318,52 @@ function shuffleBoardTiles() {
 }
 
 // ===== INPUT HANDLING =====
+// ===== HINT SYSTEM =====
+function findValidMove() {
+    for (let row = 0; row < BOARD_SIZE; row++) {
+        for (let col = 0; col < BOARD_SIZE; col++) {
+            if (col < BOARD_SIZE - 1) {
+                swapTemp(row, col, row, col + 1);
+                if (findMatches().length > 0) { swapTemp(row, col, row, col + 1); return [{row, col}, {row, col: col + 1}]; }
+                swapTemp(row, col, row, col + 1);
+            }
+            if (row < BOARD_SIZE - 1) {
+                swapTemp(row, col, row + 1, col);
+                if (findMatches().length > 0) { swapTemp(row, col, row + 1, col); return [{row, col}, {row: row + 1, col}]; }
+                swapTemp(row, col, row + 1, col);
+            }
+        }
+    }
+    return null;
+}
+
+function showHint() {
+    hideHint();
+    const move = findValidMove();
+    if (!move) return;
+    move.forEach(cell => {
+        const el = document.querySelector(`.cell[data-row="${cell.row}"][data-col="${cell.col}"]`);
+        if (el) el.classList.add('hint');
+    });
+    hintCells = move;
+}
+
+function hideHint() {
+    if (hintCells) {
+        hintCells.forEach(cell => {
+            const el = document.querySelector(`.cell[data-row="${cell.row}"][data-col="${cell.col}"]`);
+            if (el) el.classList.remove('hint');
+        });
+        hintCells = null;
+    }
+}
+
+function resetHintTimer() {
+    hideHint();
+    if (hintTimeoutId) clearTimeout(hintTimeoutId);
+    hintTimeoutId = setTimeout(showHint, HINT_DELAY_MS);
+}
+
 function hasValidMoves() {
     for (let row = 0; row < BOARD_SIZE; row++) {
         for (let col = 0; col < BOARD_SIZE; col++) {
@@ -2203,6 +2428,7 @@ function togglePause() {
     if (gameOverShown) return;
     isPaused = !isPaused;
     if (isPaused) {
+        hideHint();
         stopGameTimer();
         pauseTimeDisplay.textContent = formatTime(timeLeft);
         saveGameState();
