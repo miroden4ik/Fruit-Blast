@@ -1320,7 +1320,9 @@ let _lbPeriod = 'all';
 
 function syncLeaderboardTabs() {
     document.querySelectorAll('#lb-tabs .lb-tab').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.period === _lbPeriod);
+        const active = btn.dataset.period === _lbPeriod;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-selected', active ? 'true' : 'false');
     });
     const weeklyEl = document.getElementById('weekly-status');
     if (weeklyEl) weeklyEl.style.display = _lbPeriod === 'week' ? '' : 'none';

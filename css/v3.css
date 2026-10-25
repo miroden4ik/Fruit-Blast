@@ -433,30 +433,42 @@
 
 .lb-tabs {
     display: flex;
-    gap: 5px;
+    gap: 6px;
+    width: 100%;
+    box-sizing: border-box;
     padding: 4px;
-    border-radius: 13px;
+    border-radius: 14px;
     background: #f1ecfb;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
 }
 
 .lb-tab {
-    flex: 1;
-    padding: 8px 6px;
-    border: 0;
-    border-radius: 10px;
-    background: transparent;
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 10px 6px;
+    border: 1px solid #e4dbf7;
+    border-radius: 11px;
+    background: #fff;
     font-family: var(--fb-font);
-    font-size: 11px;
+    font-size: 11.5px;
     font-weight: 900;
-    letter-spacing: .4px;
-    color: #8a7fa6;
+    letter-spacing: .2px;
+    line-height: 1.15;
+    color: #7d7196;
+    white-space: nowrap;
     cursor: pointer;
-    transition: background .16s ease, color .16s ease, box-shadow .16s ease;
+    transition: background .16s ease, color .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+
+.lb-tab:not(.active):hover {
+    background: #faf7ff;
+    color: #5d4d86;
+    border-color: #d6c9f4;
 }
 
 .lb-tab.active {
     background: linear-gradient(135deg, #7c5cff 0%, #9b7bff 100%);
+    border-color: transparent;
     color: #fff;
     box-shadow: 0 4px 12px rgba(124, 92, 255, .32);
 }

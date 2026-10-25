@@ -330,9 +330,11 @@ function check(name, cond, extra) {
     podium: document.querySelectorAll('#leaderboard-list .lb-podium-slot').length,
     self: !!document.querySelector('#leaderboard-list .lb-self-card'),
     tabs: document.querySelectorAll('#lb-tabs .lb-tab').length,
+    labels: [...document.querySelectorAll('#lb-tabs .lb-tab')].map(b => b.textContent.trim()),
     weekHidden: getComputedStyle(document.getElementById('weekly-status')).display === 'none'
   }))()`);
   check('all-time tab renders podium/rows and hides week card', lbAllInfo.rows >= 1 && lbAllInfo.tabs === 2 && lbAllInfo.weekHidden, lbAllInfo);
+  check('two period buttons labelled week and all-time', lbAllInfo.labels[0] === 'ТОП НЕДЕЛИ' && lbAllInfo.labels[1] === 'ЗА ВСЁ ВРЕМЯ', lbAllInfo.labels);
   await shot('fb-v3-lb-all.png');
 
   await evalJs("document.querySelector('#lb-tabs .lb-tab[data-period=\"week\"]').click()");
@@ -358,6 +360,19 @@ function check(name, cond, extra) {
   check('weekly claim credits 150 diamonds once', weekAfter.d === dBeforeWeek + 150 && weekAfter.done && weekAfter.st === 1, { dBeforeWeek, weekAfter });
   await sleep(3600);
   await shot('fb-v3-lb-week-claimed.png');
+  await setViewport(1280, 900, false);
+  await sleep(500);
+  const tabsWide = await evalJs(`(() => {
+    const modal = document.querySelector('#leaderboard-modal .leaderboard-content').getBoundingClientRect();
+    const tabs = [...document.querySelectorAll('#lb-tabs .lb-tab')].map(b => {
+      const r = b.getBoundingClientRect();
+      return { w: Math.round(r.width), l: Math.round(r.left), r: Math.round(r.right), active: b.classList.contains('active'), text: b.textContent.trim() };
+    });
+    const ml = Math.round(modal.left), mr = Math.round(modal.right);
+    return { tabs, inside: tabs.every(t => t.l >= ml && t.r <= mr), noScroll: document.documentElement.scrollWidth <= innerWidth };
+  })()`);
+  check('period buttons fit modal on desktop', tabsWide.inside && tabsWide.noScroll && tabsWide.tabs.every(t => t.w >= 110), tabsWide);
+  await shot('fb-v3-lb-week-desktop.png');
   await evalJs("document.getElementById('leaderboard-close-btn').click()");
   await sleep(300);
 

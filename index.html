@@ -232,9 +232,9 @@
         <div class="leaderboard-modal" id="leaderboard-modal">
             <div class="modal-content leaderboard-content">
                 <h2 class="modal-title">ТАБЛИЦА ЛИДЕРОВ</h2>
-                <div class="lb-tabs" id="lb-tabs">
-                    <button class="lb-tab active" type="button" data-period="all">ВСЁ ВРЕМЯ</button>
-                    <button class="lb-tab" type="button" data-period="week">НЕДЕЛЯ</button>
+                <div class="lb-tabs" id="lb-tabs" role="tablist" aria-label="Период рейтинга">
+                    <button class="lb-tab" type="button" role="tab" aria-selected="false" data-period="week">ТОП НЕДЕЛИ</button>
+                    <button class="lb-tab active" type="button" role="tab" aria-selected="true" data-period="all">ЗА ВСЁ ВРЕМЯ</button>
                 </div>
                 <div class="weekly-status" id="weekly-status"></div>
                 <div class="leaderboard-list" id="leaderboard-list">
