@@ -2,42 +2,101 @@
 // ===== FRUIT DEFINITIONS (SVG) =====
 // Each fruit SVG uses a gradient with a placeholder {ID} so instances get unique gradient ids.
 const FRUIT_SVG = {
-    apple: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="{ID}" cx="30%" cy="30%" r="70%"><stop offset="0%" style="stop-color:#FF6B6B"/><stop offset="100%" style="stop-color:#C0392B"/></radialGradient></defs><ellipse cx="32" cy="36" rx="24" ry="22" fill="url(#{ID})"/><ellipse cx="32" cy="36" rx="20" ry="18" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"/><ellipse cx="26" cy="28" rx="6" ry="4" fill="rgba(255,255,255,0.4)"/><path d="M32 14 Q36 8 40 12" stroke="#8B4513" stroke-width="3" fill="none" stroke-linecap="round"/><ellipse cx="38" cy="12" rx="4" ry="3" fill="#27AE60"/></svg>`,
-    orange: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="{ID}" cx="30%" cy="30%" r="70%"><stop offset="0%" style="stop-color:#FFB347"/><stop offset="100%" style="stop-color:#FF8C00"/></radialGradient></defs><circle cx="32" cy="32" r="24" fill="url(#{ID})"/><circle cx="32" cy="32" r="20" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"/><ellipse cx="26" cy="24" rx="6" ry="4" fill="rgba(255,255,255,0.4)"/><circle cx="8" cy="8" r="2" fill="#27AE60"/></svg>`,
-    strawberry: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="{ID}" cx="30%" cy="30%" r="70%"><stop offset="0%" style="stop-color:#FF6B9D"/><stop offset="100%" style="stop-color:#C0392B"/></radialGradient></defs><path d="M32 12 Q48 20 48 40 Q48 56 32 56 Q16 56 16 40 Q16 20 32 12" fill="url(#{ID})"/><ellipse cx="28" cy="24" rx="5" ry="3" fill="rgba(255,255,255,0.4)"/><circle cx="32" cy="12" r="8" fill="#27AE60"/><circle cx="26" cy="32" r="1.5" fill="#FFE66D"/><circle cx="38" cy="32" r="1.5" fill="#FFE66D"/><circle cx="32" cy="40" r="1.5" fill="#FFE66D"/><circle cx="26" cy="48" r="1.5" fill="#FFE66D"/><circle cx="38" cy="48" r="1.5" fill="#FFE66D"/></svg>`,
-    grape: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="{ID}" cx="30%" cy="30%" r="70%"><stop offset="0%" style="stop-color:#9B59B6"/><stop offset="100%" style="stop-color:#6C3483"/></radialGradient></defs><circle cx="32" cy="20" r="10" fill="url(#{ID})"/><circle cx="22" cy="30" r="10" fill="url(#{ID})"/><circle cx="42" cy="30" r="10" fill="url(#{ID})"/><circle cx="27" cy="42" r="10" fill="url(#{ID})"/><circle cx="37" cy="42" r="10" fill="url(#{ID})"/><ellipse cx="22" cy="30" rx="4" ry="3" fill="rgba(255,255,255,0.3)"/><ellipse cx="32" cy="20" rx="4" ry="3" fill="rgba(255,255,255,0.3)"/><path d="M32 10 Q32 4 36 6" stroke="#27AE60" stroke-width="2" fill="none"/></svg>`,
-    watermelon: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="{ID}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#27AE60"/><stop offset="50%" style="stop-color:#2ECC71"/><stop offset="100%" style="stop-color:#27AE60"/></linearGradient></defs><circle cx="32" cy="32" r="24" fill="url(#{ID})"/><circle cx="32" cy="32" r="18" fill="#E74C3C"/><circle cx="32" cy="32" r="14" fill="#C0392B"/><circle cx="28" cy="28" r="2" fill="#2C3E50"/><circle cx="36" cy="28" r="2" fill="#2C3E50"/><circle cx="32" cy="36" r="2" fill="#2C3E50"/><circle cx="28" cy="36" r="1.5" fill="#2C3E50"/><circle cx="36" cy="36" r="1.5" fill="#2C3E50"/></svg>`,
-    lemon: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="{ID}" cx="30%" cy="30%" r="70%"><stop offset="0%" style="stop-color:#FFE66D"/><stop offset="100%" style="stop-color:#F1C40F"/></radialGradient></defs><ellipse cx="32" cy="32" rx="22" ry="18" fill="url(#{ID})"/><ellipse cx="32" cy="32" rx="18" ry="14" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2"/><ellipse cx="26" cy="24" rx="6" ry="4" fill="rgba(255,255,255,0.5)"/><circle cx="8" cy="8" r="2" fill="#27AE60"/></svg>`
+    apple: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="{ID}a" cx="34%" cy="26%" r="78%"><stop offset="0" stop-color="#ff9a8b"/><stop offset="46%" stop-color="#f0524a"/><stop offset="100%" stop-color="#b3152b"/></radialGradient><linearGradient id="{ID}b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#86df6f"/><stop offset="100%" stop-color="#2c9a45"/></linearGradient></defs><path d="M32 18C24 10 10 14 8 26c-2 12 6 26 16 30 3 1.6 5 1 8-.4 3 1.4 5 2 8 .4 10-4 18-18 16-30C54 14 40 10 32 18Z" fill="url(#{ID}a)"/><path d="M26 20c3 2 9 2 12 0" fill="none" stroke="#8d1b2c" stroke-width="2" stroke-linecap="round" opacity=".45"/><ellipse cx="21" cy="32" rx="7.5" ry="11" fill="#fff" opacity=".26" transform="rotate(-18 21 32)"/><ellipse cx="24" cy="28" rx="3" ry="4.5" fill="#fff" opacity=".5" transform="rotate(-18 24 28)"/><path d="M32 18c0-6 2-10 6-13" fill="none" stroke="#7b4a26" stroke-width="3.6" stroke-linecap="round"/><path d="M37 10c4-7 15-6 16-1-4 6-12 7-16 1Z" fill="url(#{ID}b)"/><path d="M40 10c4-2 8-2 11-1" fill="none" stroke="#e8ffe0" stroke-width="1.4" stroke-linecap="round" opacity=".7"/><path d="M12 46c3 6 8 10 13 12" fill="none" stroke="#5e0d1f" stroke-width="2" stroke-linecap="round" opacity=".22"/></svg>`,
+    orange: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="{ID}a" cx="33%" cy="28%" r="76%"><stop offset="0" stop-color="#ffd166"/><stop offset="55%" stop-color="#ff9f1c"/><stop offset="100%" stop-color="#e26a00"/></radialGradient><radialGradient id="{ID}b" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffb703"/><stop offset="100%" stop-color="#e07b00"/></radialGradient></defs><circle cx="32" cy="33" r="25" fill="url(#{ID}a)"/><circle cx="32" cy="33" r="25" fill="none" stroke="#d96800" stroke-width="1.6" opacity=".5"/><g fill="#b85a00" opacity=".22"><circle cx="20" cy="20" r="1.1"/><circle cx="27" cy="17" r="1"/><circle cx="35" cy="18" r=".9"/><circle cx="43" cy="23" r="1.1"/><circle cx="47" cy="32" r="1"/><circle cx="44" cy="42" r="1.1"/><circle cx="36" cy="47" r="1"/><circle cx="27" cy="46" r=".9"/><circle cx="19" cy="38" r="1"/><circle cx="16" cy="28" r=".9"/></g><path d="M32 10c2-5 6-7 10-7" fill="none" stroke="#7b4a26" stroke-width="3" stroke-linecap="round"/><path d="M40 6c5-5 13-3 13 2-4 5-11 5-13-2Z" fill="#3fae57"/><ellipse cx="23" cy="24" rx="8" ry="5.5" fill="#fff" opacity=".36" transform="rotate(-28 23 24)"/><ellipse cx="20" cy="36" rx="3" ry="5" fill="#fff" opacity=".18" transform="rotate(-12 20 36)"/><path d="M18 45c4 6 10 9 17 9" fill="none" stroke="#b85700" stroke-width="2" stroke-linecap="round" opacity=".35"/></svg>`,
+    strawberry: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="{ID}a" cx="34%" cy="24%" r="82%"><stop offset="0" stop-color="#ff8fb1"/><stop offset="48%" stop-color="#f43f5e"/><stop offset="100%" stop-color="#a80f33"/></radialGradient><linearGradient id="{ID}b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7fe06a"/><stop offset="100%" stop-color="#2d9c44"/></linearGradient></defs><path d="M32 15c13 0 21 9 19 22-2 13-11 21-19 24-8-3-17-11-19-24-2-13 6-22 19-22Z" fill="url(#{ID}a)"/><ellipse cx="22" cy="28" rx="7" ry="10" fill="#fff" opacity=".2" transform="rotate(-16 22 28)"/><ellipse cx="25" cy="25" rx="2.8" ry="4.2" fill="#fff" opacity=".42" transform="rotate(-16 25 25)"/><g fill="#ffe27a"><ellipse cx="27" cy="30" rx="1.35" ry="2" transform="rotate(-10 27 30)"/><ellipse cx="37" cy="29" rx="1.35" ry="2" transform="rotate(12 37 29)"/><ellipse cx="31" cy="37" rx="1.35" ry="2"/><ellipse cx="22" cy="39" rx="1.35" ry="2" transform="rotate(-12 22 39)"/><ellipse cx="42" cy="38" rx="1.35" ry="2" transform="rotate(12 42 38)"/><ellipse cx="27" cy="46" rx="1.3" ry="1.9" transform="rotate(-8 27 46)"/><ellipse cx="37" cy="46" rx="1.3" ry="1.9" transform="rotate(8 37 46)"/><ellipse cx="32" cy="53" rx="1.2" ry="1.8"/></g><path d="M32 16c-2-5-6-7-11-7 0 5 4 9 9 9M32 16c2-5 6-7 11-7 0 5-4 9-9 9M32 15c-5-2-9-1-12 2 4 3 9 3 12 0M32 15c5-2 9-1 12 2-4 3-9 3-12 0" fill="url(#{ID}b)"/><path d="M32 16c0-4 1-7 3-10" fill="none" stroke="#2d9c44" stroke-width="2.6" stroke-linecap="round"/></svg>`,
+    grape: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="{ID}a" cx="34%" cy="30%" r="72%"><stop offset="0" stop-color="#c08bf0"/><stop offset="52%" stop-color="#8e44dd"/><stop offset="100%" stop-color="#5b2296"/></radialGradient><linearGradient id="{ID}b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7fe06a"/><stop offset="100%" stop-color="#2d9c44"/></linearGradient></defs><path d="M32 12c3-4 8-5 11-3" fill="none" stroke="#6b3f1d" stroke-width="3" stroke-linecap="round"/><path d="M33 12c4-4 12-4 14 1-4 4-11 5-14-1Z" fill="url(#{ID}b)"/><g><circle cx="32" cy="21" r="8.4" fill="url(#{ID}a)"/><circle cx="22" cy="31" r="8.4" fill="url(#{ID}a)"/><circle cx="42" cy="31" r="8.4" fill="url(#{ID}a)"/><circle cx="27" cy="42" r="8.4" fill="url(#{ID}a)"/><circle cx="37" cy="42" r="8.4" fill="url(#{ID}a)"/><circle cx="32" cy="52" r="7.4" fill="url(#{ID}a)"/></g><g fill="#fff"><ellipse cx="29" cy="17.5" rx="2.6" ry="1.7" opacity=".5" transform="rotate(-20 29 17.5)"/><ellipse cx="19" cy="27.5" rx="2.6" ry="1.7" opacity=".5" transform="rotate(-20 19 27.5)"/><ellipse cx="39" cy="27.5" rx="2.6" ry="1.7" opacity=".45" transform="rotate(-20 39 27.5)"/><ellipse cx="24" cy="38.5" rx="2.4" ry="1.6" opacity=".4" transform="rotate(-20 24 38.5)"/><ellipse cx="34" cy="38.5" rx="2.4" ry="1.6" opacity=".4" transform="rotate(-20 34 38.5)"/></g><g fill="#3f146e" opacity=".28"><circle cx="22" cy="35" r="1.2"/><circle cx="42" cy="35" r="1.2"/><circle cx="27" cy="46" r="1.2"/><circle cx="37" cy="46" r="1.2"/><circle cx="32" cy="56" r="1"/></g></svg>`,
+    watermelon: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="{ID}a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#54e07e"/><stop offset="45%" stop-color="#2eb85c"/><stop offset="100%" stop-color="#137a3b"/></linearGradient><linearGradient id="{ID}b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff7b86"/><stop offset="60%" stop-color="#f43f5e"/><stop offset="100%" stop-color="#c2185b"/></linearGradient></defs><path d="M6 44a26 26 0 0 1 52 0c0 2.5-2 4-4.6 4H10.6C8 48 6 46.5 6 44Z" fill="url(#{ID}a)"/><path d="M10.5 43.5a21.5 21.5 0 0 1 43 0c0 1.6-1.4 2.5-3.2 2.5H13.7c-1.8 0-3.2-.9-3.2-2.5Z" fill="#f6ffe9"/><path d="M13.6 43.2a18.4 18.4 0 0 1 36.8 0c0 1.2-1 1.8-2.4 1.8H16c-1.4 0-2.4-.6-2.4-1.8Z" fill="url(#{ID}b)"/><g fill="#34122b"><ellipse cx="24" cy="39" rx="1.4" ry="2.1" transform="rotate(-14 24 39)"/><ellipse cx="33" cy="35" rx="1.4" ry="2.1"/><ellipse cx="42" cy="39" rx="1.4" ry="2.1" transform="rotate(14 42 39)"/><ellipse cx="29" cy="43" rx="1.4" ry="2" transform="rotate(-8 29 43)"/><ellipse cx="38" cy="43" rx="1.4" ry="2" transform="rotate(8 38 43)"/></g><path d="M14 33c4-8 11-13 20-14" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" opacity=".5"/><path d="M8.5 45.5c5 2 11 3 17 3" fill="none" stroke="#0d5c2d" stroke-width="1.8" stroke-linecap="round" opacity=".4"/></svg>`,
+    lemon: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="{ID}a" cx="34%" cy="26%" r="78%"><stop offset="0" stop-color="#fff59d"/><stop offset="48%" stop-color="#ffd54f"/><stop offset="100%" stop-color="#e6a100"/></radialGradient><linearGradient id="{ID}b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7fe06a"/><stop offset="100%" stop-color="#2d9c44"/></linearGradient></defs><path d="M8 38C5 23 17 8 33 8c17 0 27 15 23 30-4 15-16 21-29 20C15 57 9 49 8 38Z" fill="url(#{ID}a)"/><path d="M9 37c-1-3 0-6 2-8M57 36c1-3 0-6-2-8" fill="none" stroke="#d99a00" stroke-width="2.4" stroke-linecap="round" opacity=".65"/><g fill="#d99a00" opacity=".24"><circle cx="21" cy="20" r="1.1"/><circle cx="30" cy="16" r="1"/><circle cx="40" cy="18" r="1.1"/><circle cx="48" cy="25" r="1"/><circle cx="50" cy="36" r="1.1"/><circle cx="44" cy="46" r="1"/><circle cx="34" cy="50" r=".9"/><circle cx="23" cy="47" r="1"/><circle cx="16" cy="37" r="1"/></g><ellipse cx="24" cy="24" rx="9" ry="5.5" fill="#fff" opacity=".42" transform="rotate(-26 24 24)"/><ellipse cx="19" cy="34" rx="2.8" ry="5" fill="#fff" opacity=".2" transform="rotate(-12 19 34)"/><path d="M32 9c1-4 3-6 7-7" fill="none" stroke="#6b3f1d" stroke-width="2.6" stroke-linecap="round"/><path d="M39 4c4-4 11-2 11 2-4 4-9 4-11-2Z" fill="url(#{ID}b)"/></svg>`
 };
 
 const BONUS_SVG = {
-    bomb: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><circle cx="32" cy="32" r="20" fill="#2C3E50"/><circle cx="32" cy="32" r="16" fill="#E74C3C"/><text x="32" y="39" text-anchor="middle" fill="white" font-size="22" font-weight="bold">💣</text></svg>`,
-    rainbow: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="{ID}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#FF6B6B"/><stop offset="20%" style="stop-color:#FFE66D"/><stop offset="40%" style="stop-color:#4ECDC4"/><stop offset="60%" style="stop-color:#667eea"/><stop offset="80%" style="stop-color:#764ba2"/><stop offset="100%" style="stop-color:#FF6B6B"/></linearGradient></defs><circle cx="32" cy="32" r="22" fill="url(#{ID})"/><text x="32" y="40" text-anchor="middle" fill="white" font-size="24" font-weight="bold">🌈</text></svg>`,
-    star: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="{ID}" cx="50%" cy="50%" r="50%"><stop offset="0%" style="stop-color:#FFFACD"/><stop offset="50%" style="stop-color:#FFD700"/><stop offset="100%" style="stop-color:#FF8C00"/></radialGradient></defs><polygon points="32,4 38,24 60,24 42,38 50,60 32,46 14,60 22,38 4,24 26,24" fill="url(#{ID})" stroke="#FF8C00" stroke-width="2"/><circle cx="32" cy="32" r="10" fill="#FFFACD" opacity="0.6"/></svg>`
+    bomb: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="{ID}a" cx="34%" cy="28%" r="76%"><stop offset="0" stop-color="#5b6472"/><stop offset="48%" stop-color="#2b3442"/><stop offset="100%" stop-color="#11151d"/></radialGradient><radialGradient id="{ID}b" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#fff3b0"/><stop offset="55%" stop-color="#ffb703"/><stop offset="100%" stop-color="#ff6b35"/></radialGradient></defs><circle cx="32" cy="36" r="22" fill="url(#{ID}a)"/><circle cx="32" cy="36" r="22" fill="none" stroke="#0b0e14" stroke-width="1.5" opacity=".6"/><ellipse cx="24" cy="27" rx="7" ry="5" fill="#fff" opacity=".2" transform="rotate(-28 24 27)"/><ellipse cx="22" cy="25" rx="3" ry="2.2" fill="#fff" opacity=".4" transform="rotate(-28 22 25)"/><path d="M40 18c2-6 7-8 10-8" fill="none" stroke="#c98b3b" stroke-width="3.6" stroke-linecap="round"/><path d="M50 10l3-3M51 14l4 0M47 7l1-4" stroke="#ffd166" stroke-width="2.4" stroke-linecap="round"/><circle cx="50" cy="9" r="4.4" fill="url(#{ID}b)"/><circle cx="50" cy="9" r="4.4" fill="none" stroke="#ff8c42" stroke-width="1.2"/></svg>`,
+    rainbow: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="{ID}a" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5f6d"/><stop offset="25%" stop-color="#ffc24b"/><stop offset="50%" stop-color="#2fd6a7"/><stop offset="75%" stop-color="#4f8bff"/><stop offset="100%" stop-color="#b06bff"/></linearGradient><radialGradient id="{ID}b" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/></radialGradient></defs><circle cx="32" cy="32" r="25" fill="url(#{ID}b)"/><circle cx="32" cy="32" r="21.5" fill="none" stroke="#ff5f6d" stroke-width="4.6"/><circle cx="32" cy="32" r="16.6" fill="none" stroke="#ffc24b" stroke-width="4.4"/><circle cx="32" cy="32" r="11.9" fill="none" stroke="#2fd6a7" stroke-width="4.2"/><circle cx="32" cy="32" r="7.4" fill="none" stroke="#4f8bff" stroke-width="4"/><circle cx="32" cy="32" r="3.2" fill="#b06bff"/><g fill="#fff"><path d="M32 2l1.7 4.4L38 8l-4.3 1.6L32 14l-1.7-4.4L26 8l4.3-1.6Z"/><path d="M55 43l1.3 3.2 3.2 1.3-3.2 1.3L55 52l-1.3-3.2-3.2-1.3 3.2-1.3Z" opacity=".85"/><path d="M9 40l1.1 2.7 2.7 1.1-2.7 1.1L9 47.6l-1.1-2.7L5.2 43.8l2.7-1.1Z" opacity=".7"/></g><path d="M18 15a22 22 0 0 1 12-5" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" opacity=".55"/></svg>`,
+    star: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="{ID}a" cx="42%" cy="34%" r="66%"><stop offset="0" stop-color="#fffde7"/><stop offset="42%" stop-color="#ffd93d"/><stop offset="100%" stop-color="#ff9f1c"/></radialGradient><radialGradient id="{ID}b" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#fff" stop-opacity=".8"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/></radialGradient></defs><circle cx="32" cy="32" r="27" fill="url(#{ID}b)"/><path d="M32 3.5l7.6 18.5 20 1.7-15.2 13.1 4.6 19.6L32 46.2 15 56.4l4.6-19.6L4.4 23.7l20-1.7Z" fill="url(#{ID}a)" stroke="#f59e0b" stroke-width="1.6" stroke-linejoin="round"/><path d="M32 10.5l5.4 13.2 14.2 1.2-10.8 9.3 3.3 14-12.1-7.3-12.1 7.3 3.3-14L12.4 24.9l14.2-1.2Z" fill="none" stroke="#fff" stroke-width="1.4" opacity=".55"/><path d="M32 20l3.4 8.4 9 .8-6.8 5.9 2 8.9L32 39.5l-7.6 4.5 2-8.9-6.8-5.9 9-.8Z" fill="#fff8c9" opacity=".75"/><g fill="#fff"><circle cx="52" cy="12" r="2"/><circle cx="12" cy="17" r="1.5"/><circle cx="50" cy="52" r="1.6"/><circle cx="14" cy="50" r="1.3"/></g></svg>`
 };
+
+const UI_ICON_SVG = {
+    hammer: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4.5 19 9l-2 2-4.5-4.5z"/><path d="M13 8 4.5 16.5a2.1 2.1 0 0 0 3 3L16 11"/><path d="M12 3l2-2 7 7-2 2"/></svg>`,
+    rocket: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 15c-1.5 1.5-2 5-2 5s3.5-.5 5-2"/><path d="M9 14 4 12l3-3 4 .8"/><path d="M10 15l2 5 3-3-.8-4"/><path d="M9.5 14.5C7 9 11 4 19 3c1 8-4 12-9.5 11.5Z"/><circle cx="14.5" cy="8.5" r="1.6"/></svg>`,
+    swap: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13l-3-3"/><path d="M20 16H7l3 3"/></svg>`,
+    target: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.8"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg>`,
+    matches: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.6" fill="currentColor" opacity=".3"/></svg>`,
+    bonus: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8l2 6 6 2-6 2-2 6-2-6-6-2 6-2Z"/><path d="M19 17.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8Z" opacity=".7"/></svg>`,
+    combo: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5c1 4 5 5.5 5 10a5 5 0 0 1-10 0c0-2 .8-3.4 2-4.6.2 1.8 1 2.8 2.2 3.3C11 8.5 11 5.5 12 2.5Z"/><path d="M12 21.5v-1"/></svg>`,
+    playtime: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12.5" r="8.5"/><path d="M12 7.5v5.3l3.4 2"/><path d="M9.5 2.5h5"/></svg>`,
+    diamond: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M7 3h10l4 6-9 12L3 9Z"/><path d="M3 9h18M9.5 3 8 9l4 12 4-12-1.5-6"/></svg>`,
+    trophy: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v5a4 4 0 0 1-8 0Z"/><path d="M8 6H4.5v1.5A3.5 3.5 0 0 0 8 11M16 6h3.5v1.5A3.5 3.5 0 0 1 16 11"/><path d="M12 13v4M8.5 21h7M10 21v-4h4v4"/></svg>`,
+    lock: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2.4"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg>`,
+    bomb: `<svg viewBox="0 0 24 24" fill="#2b3442" stroke="#1b2230" stroke-width="1.2"><circle cx="10.5" cy="14.5" r="7.5"/><path d="M15.5 8.5c1.5-2.5 3.4-3 5-2.8" fill="none" stroke="#c98b3b" stroke-width="2" stroke-linecap="round"/><path d="M20.5 3.5l-1 2.6M22 6l-2.6.8M19 2.2l.4 2.4" fill="none" stroke="#ffb703" stroke-width="1.2" stroke-linecap="round"/><circle cx="8" cy="12" r="2" fill="#fff" opacity=".3"/></svg>`
+};
+
+function iconHtml(name) {
+    return UI_ICON_SVG[name] || '';
+}
+
+function hydrateDecorations() {
+    document.querySelectorAll('[data-icon]').forEach(el => {
+        if (!el.dataset.hydrated) {
+            el.innerHTML = iconHtml(el.dataset.icon);
+            el.dataset.hydrated = '1';
+        }
+    });
+    const wrap = document.getElementById('loading-fruit');
+    if (wrap && !wrap.childElementCount) {
+        ['apple', 'orange', 'strawberry', 'grape', 'watermelon', 'lemon'].forEach((type, i) => {
+            const span = document.createElement('span');
+            span.className = 'lf';
+            span.innerHTML = FRUIT_SVG[type].split('{ID}').join('lf' + i);
+            wrap.appendChild(span);
+        });
+    }
+}
 
 const FRUIT_TYPES = Object.keys(FRUIT_SVG);
 
 const FRUIT_COLORS = {
-    apple: '#FF6B6B',
-    orange: '#FFB347',
-    strawberry: '#FF6B9D',
-    grape: '#9B59B6',
-    watermelon: '#E74C3C',
-    lemon: '#F1C40F'
+    apple: '#f0524a',
+    orange: '#ff9f1c',
+    strawberry: '#f43f5e',
+    grape: '#8e44dd',
+    watermelon: '#2eb85c',
+    lemon: '#ffd54f'
 };
 
 const COMBO_COLORS = ['#27AE60', '#2ECC71', '#F1C40F', '#E67E22', '#E74C3C', '#9B59B6', '#3498DB'];
 
+const DAILY_TASK_VERSION = 3;
+
 // ===== DAILY TASKS =====
 const DAILY_TASK_DEFS = [
-    { type: 'score',     template: 'Набери {n} очков',           targets: [500, 1000, 1500, 2000, 3000], reward: 5,  icon: '🎯' },
-    { type: 'combo',     template: 'Сделай комбо x3+ {n} раз',   targets: [2, 3, 5, 7],                   reward: 8,  icon: '🔥' },
-    { type: 'matches',   template: 'Сделай {n} совпадений',      targets: [20, 30, 40, 50],               reward: 5,  icon: '🧩' },
-    { type: 'bombs',     template: 'Создай {n} бомб',            targets: [2, 3, 5],                      reward: 10, icon: '💣' },
-    { type: 'rainbows',  template: 'Создай {n} радуг',           targets: [1, 2, 3],                      reward: 12, icon: '🌈' },
-    { type: 'playtime',  template: 'Играй {n} минут',            targets: [5, 10, 15],                    reward: 3,  icon: '⏱️' }
+    { type: 'score',    template: 'Набери {n} очков',        targets: [800, 1200, 1600], reward: 6 },
+    { type: 'matches',  template: 'Собери {n} совпадений',    targets: [25, 35, 50],      reward: 5 },
+    { type: 'bonus',    template: 'Создай {n} {word}',        targets: [3, 5, 7],         reward: 8, words: ['бонус', 'бонуса', 'бонусов'] },
+    { type: 'combo',    template: 'Сделай {n} комбо подряд',  targets: [3, 5, 7],         reward: 10 },
+    { type: 'playtime', template: 'Играй {n} минут',          targets: [5, 10, 15],       reward: 4 }
 ];
+const DAILY_TASK_TYPES = DAILY_TASK_DEFS.map(d => d.type);
+const DAILY_TASK_ICONS = {
+    score: 'target',
+    matches: 'matches',
+    bonus: 'bonus',
+    combo: 'combo',
+    playtime: 'playtime'
+};
+
+function pluralRu(n, one, few, many) {
+    const n10 = n % 10;
+    const n100 = n % 100;
+    if (n10 === 1 && n100 !== 11) return one;
+    if (n10 >= 2 && n10 <= 4 && (n100 < 12 || n100 > 14)) return few;
+    return many;
+}
+
+function buildTaskName(def, target) {
+    const word = def.words ? pluralRu(target, def.words[0], def.words[1], def.words[2]) : '';
+    return def.template.replace('{n}', target).replace('{word}', word);
+}
 
 // ===== BOOSTERS & DIAMONDS =====
 const BOOSTER_DEFS = {
@@ -339,6 +398,10 @@ function _cs_applyToRuntime(state) {
             }
         }
     }
+    if (!dailyTasksAreValid()) {
+        generateDailyTasks();
+        changed = true;
+    }
     return changed;
 }
 
@@ -625,6 +688,7 @@ function onPlayerMatch() {
         showPlayerCombo(playerCombo);
         playComboTone(playerCombo);
         spawnComboParticles(playerCombo);
+        trackTaskProgress('combo', 1);
         if (playerCombo >= 3) {
             comboHitsThisGame++;
         }
@@ -712,6 +776,8 @@ let bombsCreatedThisGame = 0;
 let rainbowsCreatedThisGame = 0;
 let starsCreatedThisGame = 0;
 let comboHitsThisGame = 0;
+let playSecondsThisGame = 0;
+let playSecondsTracked = 0;
 let newRecordThisGame = false;
 
 // ===== TIMER STATE =====
@@ -739,7 +805,6 @@ const modalRecordBadge = document.getElementById('modal-record-badge');
 const statDiamonds = document.getElementById('stat-diamonds');
 const statCombo = document.getElementById('stat-combo');
 const statMatches = document.getElementById('stat-matches');
-const statBombs = document.getElementById('stat-bombs');
 const statStars = document.getElementById('stat-stars');
 const shareGameoverBtn = document.getElementById('share-gameover-btn');
 const pauseModal = document.getElementById('pause-modal');
@@ -936,6 +1001,12 @@ function startGameTimer() {
         lastTimerTick = now;
         if (isPaused || gameOverShown) return;
         timeLeft -= elapsed;
+        playSecondsThisGame += elapsed;
+        const playedMinutes = Math.floor(playSecondsThisGame / 60);
+        if (playedMinutes > playSecondsTracked) {
+            trackTaskProgress('playtime', playedMinutes - playSecondsTracked);
+            playSecondsTracked = playedMinutes;
+        }
         if (timeLeft <= 0) {
             timeLeft = 0;
             updateTimerDisplay();
@@ -1025,14 +1096,14 @@ function endGameByTime() {
     gameOverShown = true;
     isPaused = false;
 
-    const playTime = GAME_DURATION;
+    const playTime = Math.max(0, Math.floor(playSecondsThisGame));
     recordGameEnd(score, playTime);
-    trackTaskProgress('score', score);
-    trackTaskProgress('bombs', bombsCreatedThisGame);
-    trackTaskProgress('rainbows', rainbowsCreatedThisGame);
-    trackTaskProgress('matches', matchesThisGame);
-    trackTaskProgress('combo', comboHitsThisGame);
-    trackTaskProgress('playtime', Math.floor(playTime / 60));
+    setTaskProgress('score', score);
+    const playedMinutes = Math.floor(playTime / 60);
+    if (playedMinutes > playSecondsTracked) {
+        trackTaskProgress('playtime', playedMinutes - playSecondsTracked);
+        playSecondsTracked = playedMinutes;
+    }
 
     clearSavedGame();
     finalScore.textContent = score;
@@ -1060,6 +1131,7 @@ function saveGameState() {
         timeLeft: timeLeft,
         score: score,
         diamondsAwardedForScore: diamondsAwardedForScore,
+        playSecondsThisGame: playSecondsThisGame,
         board: board,
         timestamp: Date.now()
     };
@@ -1089,6 +1161,8 @@ function restoreSavedGame(state) {
     score = state.score || 0;
     timeLeft = Math.max(0, state.timeLeft || 0);
     diamondsAwardedForScore = state.diamondsAwardedForScore || 0;
+    playSecondsThisGame = Math.max(0, Number(state.playSecondsThisGame) || 0);
+    playSecondsTracked = Math.floor(playSecondsThisGame / 60);
     if (Array.isArray(state.board) && state.board.length === BOARD_SIZE) {
         board = state.board;
     } else {
@@ -1228,10 +1302,11 @@ function startLeaderboardRefresh() {
                 users = _CS.lbCached;
             } else {
                 users = await window._leaderboard.fetchLeaderboardAsync();
-                _CS.lbCached = Array.isArray(users) ? users : [];
+                if (!Array.isArray(users)) return;
+                _CS.lbCached = users;
                 _CS.lbCacheUntil = now + _CS.lbMs;
             }
-            if (!Array.isArray(users)) users = [];
+            if (!Array.isArray(users)) return;
             const ok = window._leaderboard.diffUpdateLeaderboard(
                 leaderboardList, users, currentUser.vk_user_id, score
             );
@@ -1468,25 +1543,73 @@ function showProfileModal() {
 // ===== DAILY TASKS =====
 let dailyTasks = [];
 let dailyTasksDate = '';
+let tasksCountdownId = null;
+
+function todayStamp() {
+    return new Date().toISOString().slice(0, 10);
+}
+
+function seedFromString(str) {
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) {
+        h ^= str.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+}
+
+function mulberry32(seed) {
+    let a = seed >>> 0;
+    return function () {
+        a = (a + 0x6D2B79F5) | 0;
+        let t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
+function dailyTasksAreValid() {
+    return dailyTasksDate === todayStamp() &&
+        Array.isArray(dailyTasks) &&
+        dailyTasks.length === 3 &&
+        dailyTasks.every(t => {
+            if (!t || !DAILY_TASK_TYPES.includes(t.type)) return false;
+            if (typeof t.target !== 'number' || t.target <= 0) return false;
+            const def = DAILY_TASK_DEFS.find(d => d.type === t.type);
+            return !!def && t.name === buildTaskName(def, t.target);
+        });
+}
+
+function ensureDailyTasksValid() {
+    if (!dailyTasksAreValid()) {
+        generateDailyTasks();
+        return true;
+    }
+    return false;
+}
 
 function loadDailyTasks() {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayStamp();
     dailyTasksDate = today;
-    const loadFromData = (data) => {
-        if (data && data.date === today && Array.isArray(data.tasks)) {
-            dailyTasks = data.tasks;
-            return true;
-        }
-        return false;
+
+    const loadFromData = data => {
+        if (!data || data.version !== DAILY_TASK_VERSION) return false;
+        if (data.date !== today || !Array.isArray(data.tasks)) return false;
+        if (data.tasks.length !== 3) return false;
+        if (!data.tasks.every(t => t && DAILY_TASK_TYPES.includes(t.type))) return false;
+        dailyTasks = data.tasks;
+        return true;
     };
+
     let loadedLocal = false;
     try {
         const raw = localStorage.getItem('fruitBlastDailyTasks');
         if (raw && loadFromData(JSON.parse(raw))) loadedLocal = true;
     } catch (e) {}
+
     vkStorageGet(VK_KEYS.dailyTasks).then(v => {
         let loadedVk = false;
-        if (v) {
+        if (v && !loadedLocal) {
             try { loadedVk = loadFromData(JSON.parse(v)); } catch (e) {}
         }
         if (!loadedLocal && !loadedVk) generateDailyTasks();
@@ -1494,50 +1617,86 @@ function loadDailyTasks() {
     }).catch(() => {
         if (!loadedLocal) generateDailyTasks();
     });
+
     if (loadedLocal) updateDailyTasksBadge();
 }
 
 function generateDailyTasks() {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayStamp();
     dailyTasksDate = today;
-    const shuffled = [...DAILY_TASK_DEFS].sort(() => Math.random() - 0.5);
-    dailyTasks = shuffled.slice(0, 3).map((def, i) => {
-        const target = def.targets[Math.floor(Math.random() * def.targets.length)];
+    const rand = mulberry32(seedFromString(today + ':fruit-blast'));
+    const defs = [...DAILY_TASK_DEFS];
+
+    for (let i = defs.length - 1; i > 0; i--) {
+        const j = Math.floor(rand() * (i + 1));
+        [defs[i], defs[j]] = [defs[j], defs[i]];
+    }
+
+    dailyTasks = defs.slice(0, 3).map((def, i) => {
+        const target = def.targets[Math.floor(rand() * def.targets.length)];
         return {
             id: i,
             type: def.type,
             template: def.template,
-            icon: def.icon,
-            target: target,
+            target,
             progress: 0,
             reward: def.reward,
             completed: false,
             claimed: false,
-            name: def.template.replace('{n}', target)
+            notified: false,
+            name: buildTaskName(def, target)
         };
     });
     saveDailyTasks();
 }
 
 function saveDailyTasks() {
-    const payload = JSON.stringify({ date: dailyTasksDate, tasks: dailyTasks });
+    const payload = JSON.stringify({
+        version: DAILY_TASK_VERSION,
+        date: dailyTasksDate,
+        tasks: dailyTasks
+    });
     try { localStorage.setItem('fruitBlastDailyTasks', payload); } catch (e) {}
     cloudSync_markDirty();
     updateDailyTasksBadge();
 }
 
+function notifyTaskCompleted(task) {
+    if (task.notified) return;
+    task.notified = true;
+    showMessage('✅ Задание выполнено: ' + task.name);
+}
+
+function applyTaskProgress(task, nextValue) {
+    if (task.claimed) return false;
+    const clamped = Math.max(0, Math.min(nextValue, task.target));
+    if (clamped === task.progress) return false;
+    task.progress = clamped;
+    if (task.progress >= task.target && !task.completed) {
+        task.completed = true;
+        task.completedAt = Date.now();
+        notifyTaskCompleted(task);
+    }
+    return true;
+}
+
 function trackTaskProgress(type, amount) {
+    if (!Array.isArray(dailyTasks) || dailyTasks.length === 0) return;
+    if (!amount || amount <= 0) return;
     let changed = false;
     dailyTasks.forEach(task => {
-        if (task.type === type && !task.claimed) {
-            const before = task.progress;
-            task.progress = Math.min(task.progress + amount, task.target);
-            if (task.progress > before) changed = true;
-            if (task.progress >= task.target && !task.completed) {
-                task.completed = true;
-                changed = true;
-            }
-        }
+        if (task.type !== type) return;
+        if (applyTaskProgress(task, (Number(task.progress) || 0) + amount)) changed = true;
+    });
+    if (changed) saveDailyTasks();
+}
+
+function setTaskProgress(type, value) {
+    if (!Array.isArray(dailyTasks) || dailyTasks.length === 0) return;
+    let changed = false;
+    dailyTasks.forEach(task => {
+        if (task.type !== type) return;
+        if (applyTaskProgress(task, Math.max(Number(task.progress) || 0, value))) changed = true;
     });
     if (changed) saveDailyTasks();
 }
@@ -1546,13 +1705,26 @@ function claimTaskReward(taskId) {
     const task = dailyTasks.find(t => t.id === taskId);
     if (!task || !task.completed || task.claimed) return;
     task.claimed = true;
+    task.claimedAt = Date.now();
     addDiamonds(task.reward);
     saveDailyTasks();
-    showMessage('+' + task.reward + ' 💎');
+    showMessage('+' + task.reward + ' 💎 за задание!');
+    showTasksModal();
+}
+
+function claimAllTaskRewards() {
+    const ready = dailyTasks.filter(t => t.completed && !t.claimed);
+    if (ready.length === 0) return;
+    const total = ready.reduce((sum, t) => sum + (Number(t.reward) || 0), 0);
+    ready.forEach(t => { t.claimed = true; t.claimedAt = Date.now(); });
+    addDiamonds(total);
+    saveDailyTasks();
+    showMessage('+' + total + ' 💎 за все задания!');
     showTasksModal();
 }
 
 function updateDailyTasksBadge() {
+    if (!Array.isArray(dailyTasks)) return;
     const unclaimed = dailyTasks.filter(t => t.completed && !t.claimed).length;
     if (dailyTasksCount) {
         dailyTasksCount.textContent = unclaimed;
@@ -1560,32 +1732,52 @@ function updateDailyTasksBadge() {
     }
 }
 
+function getTasksResetText() {
+    const now = new Date();
+    const end = new Date(now);
+    end.setHours(24, 0, 0, 0);
+    const ms = Math.max(0, end.getTime() - now.getTime());
+    const h = Math.floor(ms / 3600000);
+    const m = Math.floor((ms % 3600000) / 60000);
+    return 'Обновление через ' + h + ' ч ' + m + ' мин';
+}
+
 function showTasksModal() {
+    ensureDailyTasksValid();
+
     const existing = document.getElementById('tasks-modal');
     if (existing) existing.remove();
+    if (tasksCountdownId) { clearInterval(tasksCountdownId); tasksCountdownId = null; }
 
     const modal = document.createElement('div');
     modal.className = 'tasks-modal active';
     modal.id = 'tasks-modal';
 
+    const readyCount = dailyTasks.filter(t => t.completed && !t.claimed).length;
+    const readyDiamonds = dailyTasks.filter(t => t.completed && !t.claimed)
+        .reduce((sum, t) => sum + (Number(t.reward) || 0), 0);
+
     let tasksHtml = dailyTasks.map(task => {
-        const pct = Math.min(100, Math.round((task.progress / task.target) * 100));
+        const pct = Math.min(100, Math.round(((Number(task.progress) || 0) / task.target) * 100));
+        const icon = iconHtml(DAILY_TASK_ICONS[task.type] || 'bonus');
         let actionHtml = '';
         if (task.claimed) {
             actionHtml = '<div class="task-claimed">✅ Получено</div>';
         } else if (task.completed) {
             actionHtml = `<button class="task-claim-btn" data-task-id="${task.id}">💎 ЗАБРАТЬ ${task.reward}</button>`;
-        } else {
-            actionHtml = `<div class="task-progress-text">${task.progress}/${task.target}</div>`;
         }
         return `
-            <div class="task-card ${task.completed && !task.claimed ? 'task-ready' : ''} ${task.claimed ? 'task-done' : ''}">
+            <div class="task-card ${task.completed && !task.claimed ? 'task-ready' : ''} ${task.claimed ? 'task-done' : ''}" data-type="${task.type}">
                 <div class="task-header">
-                    <span class="task-icon">${task.icon}</span>
+                    <span class="task-icon">${icon}</span>
                     <span class="task-name">${task.name}</span>
+                    <span class="task-reward">💎 ${task.reward}</span>
                 </div>
                 <div class="task-bar"><div class="task-bar-fill" style="width:${pct}%"></div></div>
-                ${actionHtml}
+                <div class="task-card-actions">
+                    <span class="task-progress-text">${task.progress} / ${task.target}</span>
+                    ${actionHtml}
+                </div>
             </div>
         `;
     }).join('');
@@ -1593,19 +1785,42 @@ function showTasksModal() {
     modal.innerHTML = `
         <div class="modal-content tasks-content">
             <h2 class="modal-title">ЕЖЕДНЕВНЫЕ ЗАДАНИЯ</h2>
+            <div class="tasks-subtitle">
+                <span>Выполняй и получай алмазы</span>
+                <span class="tasks-reset" id="tasks-reset-text">${getTasksResetText()}</span>
+            </div>
             <div class="tasks-list">${tasksHtml}</div>
-            <button class="play-again-btn" id="tasks-close-btn">ЗАКРЫТЬ</button>
+            ${readyCount > 0 ? `<button class="tasks-claim-all" id="tasks-claim-all">ЗАБРАТЬ ВСЁ · 💎 ${readyDiamonds}</button>` : ''}
+            <button class="play-again-btn secondary" id="tasks-close-btn">ЗАКРЫТЬ</button>
         </div>
     `;
     document.body.appendChild(modal);
 
-    document.getElementById('tasks-close-btn').addEventListener('click', () => modal.remove());
+    const closeBtn = document.getElementById('tasks-close-btn');
+    if (closeBtn) closeBtn.addEventListener('click', () => modal.remove());
+
+    const claimAllBtn = document.getElementById('tasks-claim-all');
+    if (claimAllBtn) claimAllBtn.addEventListener('click', claimAllTaskRewards);
+
     modal.querySelectorAll('.task-claim-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
-            claimTaskReward(parseInt(btn.dataset.taskId));
+            claimTaskReward(parseInt(btn.dataset.taskId, 10));
         });
     });
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.remove();
+    });
+
+    tasksCountdownId = setInterval(() => {
+        const el = document.getElementById('tasks-reset-text');
+        if (!el || !document.getElementById('tasks-modal')) {
+            if (tasksCountdownId) { clearInterval(tasksCountdownId); tasksCountdownId = null; }
+            return;
+        }
+        el.textContent = getTasksResetText();
+    }, 60000);
 }
 
 // ===== BOARD LOGIC =====
@@ -1622,7 +1837,10 @@ function initGame() {
     matchesThisGame = 0;
     bombsCreatedThisGame = 0;
     rainbowsCreatedThisGame = 0;
+    starsCreatedThisGame = 0;
     comboHitsThisGame = 0;
+    playSecondsThisGame = 0;
+    playSecondsTracked = 0;
     newRecordThisGame = false;
     selectedCell = null;
     isProcessing = false;
@@ -1711,7 +1929,7 @@ function renderBoard() {
                     // Бомба показывает свой тип фрукта + значок бомбы,
                     // чтобы было видно, с какими фруктами её совмещать.
                     fruitDiv.innerHTML = fruitSvgHtml(fruitData.type, id)
-                        + '<span class="bomb-badge">💣</span>';
+                        + '<span class="bomb-badge">' + iconHtml('bomb') + '</span>';
                     cell.classList.add('bomb');
                 } else if (fruitData.bonus === 'rainbow') {
                     fruitDiv.innerHTML = bonusSvgHtml('rainbow', id);
@@ -1839,14 +2057,278 @@ function isAdjacent(cell1, cell2) {
     return (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
 }
 
+// ===== BONUS / EXPLOSION HELPERS =====
+function cellKey(row, col) { return row + ',' + col; }
+function keyToPos(key) { const p = key.split(','); return { row: parseInt(p[0], 10), col: parseInt(p[1], 10) }; }
+function isInsideBoard(row, col) { return row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE; }
+
+function elementCenter(row, col) {
+    const cell = matrixCells[row] && matrixCells[row][col];
+    if (!cell) return null;
+    const rect = cell.getBoundingClientRect();
+    const boardRect = gameBoard.getBoundingClientRect();
+    return { x: rect.left - boardRect.left + rect.width / 2, y: rect.top - boardRect.top + rect.height / 2 };
+}
+
+function spawnEffectRing(row, col, kind) {
+    const p = elementCenter(row, col);
+    if (!p) return;
+    const ring = document.createElement('div');
+    ring.className = 'effect-ring ring-' + kind;
+    ring.style.left = p.x + 'px';
+    ring.style.top = p.y + 'px';
+    gameBoard.appendChild(ring);
+    setTimeout(() => ring.remove(), 620);
+}
+
+function spawnEffectBeam(row, col, direction) {
+    const p = elementCenter(row, col);
+    if (!p) return;
+    const boardRect = gameBoard.getBoundingClientRect();
+    const beam = document.createElement('div');
+    beam.className = 'effect-beam ' + (direction === 'row' ? 'beam-row' : 'beam-col');
+    if (direction === 'row') {
+        beam.style.left = '4px';
+        beam.style.width = Math.max(0, boardRect.width - 8) + 'px';
+        beam.style.top = (p.y - 4) + 'px';
+    } else {
+        beam.style.top = '4px';
+        beam.style.height = Math.max(0, boardRect.height - 8) + 'px';
+        beam.style.left = (p.x - 4) + 'px';
+    }
+    gameBoard.appendChild(beam);
+    setTimeout(() => beam.remove(), 520);
+}
+
+function shakeBoard(kind) {
+    const cls = kind === 'hard' ? 'shake-hard' : 'shake-soft';
+    gameBoard.classList.remove('shake-soft', 'shake-hard');
+    void gameBoard.offsetWidth;
+    gameBoard.classList.add(cls);
+    setTimeout(() => gameBoard.classList.remove(cls), 520);
+}
+
+function mostCommonFruitType() {
+    const counts = {};
+    let bestType = FRUIT_TYPES[0];
+    let bestCount = -1;
+    for (let r = 0; r < BOARD_SIZE; r++) {
+        for (let c = 0; c < BOARD_SIZE; c++) {
+            const f = board[r][c];
+            if (!f || f.bonus || !FRUIT_COLORS[f.type]) continue;
+            counts[f.type] = (counts[f.type] || 0) + 1;
+            if (counts[f.type] > bestCount) {
+                bestCount = counts[f.type];
+                bestType = f.type;
+            }
+        }
+    }
+    return bestType;
+}
+
+/**
+ * Собирает множество клеток к очистке, рекурсивно активируя все бонусы,
+ * которые в это множество попали. Возвращает { cells:Set<"row,col">, scoreGain, activatedList }.
+ */
+function collectClearCascade(seedCells, opts = {}) {
+    const protect = opts.protect || null;
+    const rainbowTargets = opts.rainbowTargets || null;
+    const cells = new Set();
+    const queue = [];
+    const activated = new Set();
+    const activatedList = [];
+    let scoreGain = 0;
+
+    const addCell = (row, col) => {
+        if (!isInsideBoard(row, col)) return;
+        if (!board[row][col]) return;
+        const key = cellKey(row, col);
+        if (protect && protect.has(key)) return;
+        if (cells.has(key)) return;
+        cells.add(key);
+        queue.push({ row, col });
+    };
+
+    (seedCells || []).forEach(pos => {
+        if (!pos) return;
+        addCell(pos.row, pos.col);
+    });
+
+    while (queue.length > 0) {
+        const { row, col } = queue.shift();
+        const fruit = board[row] && board[row][col];
+        if (!fruit || !fruit.bonus) continue;
+        const key = cellKey(row, col);
+        if (activated.has(key)) continue;
+        activated.add(key);
+        activatedList.push({ row, col, bonus: fruit.bonus });
+
+        if (fruit.bonus === 'bomb') {
+            scoreGain += 30;
+            for (let r = row - 1; r <= row + 1; r++) {
+                for (let c = col - 1; c <= col + 1; c++) addCell(r, c);
+            }
+            spawnBombParticles(row, col);
+            spawnEffectRing(row, col, 'bomb');
+            shakeBoard('soft');
+            if (soundEnabled) playSoundBomb();
+        } else if (fruit.bonus === 'star') {
+            scoreGain += 80;
+            for (let c = 0; c < BOARD_SIZE; c++) addCell(row, c);
+            for (let r = 0; r < BOARD_SIZE; r++) addCell(r, col);
+            spawnEffectBeam(row, col, 'row');
+            spawnEffectBeam(row, col, 'col');
+            spawnEffectRing(row, col, 'star');
+            spawnStarParticles(row, col);
+            for (let c = 0; c < BOARD_SIZE; c += 2) spawnStarParticles(row, c);
+            for (let r = 0; r < BOARD_SIZE; r += 2) spawnStarParticles(r, col);
+            shakeBoard('hard');
+            if (soundEnabled) playSoundStar();
+        } else if (fruit.bonus === 'rainbow') {
+            scoreGain += 50;
+            const target = (rainbowTargets && rainbowTargets.get(key)) || mostCommonFruitType();
+            for (let r = 0; r < BOARD_SIZE; r++) {
+                for (let c = 0; c < BOARD_SIZE; c++) {
+                    const f = board[r][c];
+                    if (f && f.type === target && f.bonus !== 'rainbow') addCell(r, c);
+                }
+            }
+            spawnRainbowParticles(row, col);
+            spawnEffectRing(row, col, 'rainbow');
+            shakeBoard('soft');
+            if (soundEnabled) playSoundRainbow();
+        }
+    }
+
+    scoreGain += cells.size * 5;
+    return { cells, scoreGain, activatedList };
+}
+
+async function detonateCells(seedCells, opts = {}) {
+    const result = collectClearCascade(seedCells, opts);
+    if (result.cells.size === 0) return { cleared: 0, activated: [] };
+
+    score += result.scoreGain + (opts.extraScore || 0);
+    updateScoreDisplay();
+
+    const keys = [...result.cells];
+    keys.forEach(key => {
+        const { row, col } = keyToPos(key);
+        const el = matrixCells[row] && matrixCells[row][col];
+        if (el && el.querySelector('.fruit')) el.classList.add('matched');
+    });
+
+    const sampleStep = keys.length > 24 ? 3 : 1;
+    keys.forEach((key, i) => {
+        if (i % sampleStep !== 0) return;
+        const { row, col } = keyToPos(key);
+        const f = board[row][col];
+        if (f && f.type) spawnMatchParticles(row, col, f.type);
+    });
+
+    await sleep(190);
+    keys.forEach(key => {
+        const { row, col } = keyToPos(key);
+        board[row][col] = null;
+    });
+    await dropFruits();
+    await fillEmptySpaces();
+    renderBoard();
+
+    if (findMatches().length > 0) {
+        comboCount = 0;
+        await processMatches();
+    }
+    return { cleared: result.cells.size, activated: result.activatedList };
+}
+
+function buildSpecialPairDetonation(a, b) {
+    const fa = board[a.row] && board[a.row][a.col];
+    const fb = board[b.row] && board[b.row][b.col];
+    if (!fa || !fb) return null;
+
+    const ba = fa.bonus;
+    const bb = fb.bonus;
+    if (ba !== 'rainbow' && bb !== 'rainbow' && (!ba || !bb)) return null;
+
+    const seeds = [];
+    const rainbowTargets = new Map();
+    const push = (row, col) => { if (isInsideBoard(row, col)) seeds.push({ row, col }); };
+    const pushArea = (row, col, radius) => {
+        for (let r = row - radius; r <= row + radius; r++) {
+            for (let c = col - radius; c <= col + radius; c++) push(r, c);
+        }
+    };
+    const pushType = type => {
+        for (let r = 0; r < BOARD_SIZE; r++) {
+            for (let c = 0; c < BOARD_SIZE; c++) {
+                if (board[r][c] && board[r][c].type === type) push(r, c);
+            }
+        }
+    };
+    const pushCross = (row, col) => {
+        for (let c = 0; c < BOARD_SIZE; c++) push(row, c);
+        for (let r = 0; r < BOARD_SIZE; r++) push(r, col);
+    };
+
+    let extraScore = 0;
+    let message = '';
+
+    if (ba === 'rainbow' && bb === 'rainbow') {
+        for (let r = 0; r < BOARD_SIZE; r++) for (let c = 0; c < BOARD_SIZE; c++) push(r, c);
+        extraScore = 300;
+        message = 'МЕГА-РАДУГА! 🌈';
+    } else if (ba === 'rainbow' || bb === 'rainbow') {
+        const rainbowPos = ba === 'rainbow' ? a : b;
+        const otherPos = ba === 'rainbow' ? b : a;
+        const partner = board[otherPos.row][otherPos.col];
+        push(rainbowPos.row, rainbowPos.col);
+        push(otherPos.row, otherPos.col);
+        if (partner.bonus === 'bomb') {
+            pushArea(otherPos.row, otherPos.col, 2);
+            pushType(partner.type);
+            extraScore = 120;
+            message = 'Радуга + Бомба! 💥';
+        } else if (partner.bonus === 'star') {
+            pushCross(otherPos.row, otherPos.col);
+            pushType(partner.type);
+            extraScore = 150;
+            message = 'Радуга + Звезда! ⭐';
+        } else {
+            pushType(partner.type);
+            rainbowTargets.set(cellKey(rainbowPos.row, rainbowPos.col), partner.type);
+            extraScore = 80;
+            message = 'Радуга! 🌈';
+        }
+    } else if (ba === 'bomb' && bb === 'bomb') {
+        pushArea(a.row, a.col, 2);
+        pushArea(b.row, b.col, 2);
+        extraScore = 100;
+        message = 'Двойной взрыв! 💥';
+    } else if (ba === 'star' && bb === 'star') {
+        pushCross(a.row, a.col);
+        pushCross(b.row, b.col);
+        extraScore = 200;
+        message = 'Звёздный крест! ✨';
+    } else if ((ba === 'bomb' && bb === 'star') || (ba === 'star' && bb === 'bomb')) {
+        const bombPos = ba === 'bomb' ? a : b;
+        const starPos = ba === 'star' ? a : b;
+        pushArea(bombPos.row, bombPos.col, 1);
+        pushCross(starPos.row, starPos.col);
+        extraScore = 150;
+        message = 'Бомба + Звезда! 💥';
+    } else {
+        return null;
+    }
+
+    return { seeds, rainbowTargets, extraScore, message };
+}
+
 // ===== SWAP =====
 async function swapFruits(cell1, cell2) {
+    if (isProcessing) return;
     isProcessing = true;
-    if (selectedCell) {
-        const pc = document.querySelector(`.cell[data-row="${selectedCell.row}"][data-col="${selectedCell.col}"]`);
-        if (pc) pc.classList.remove('selected');
-        selectedCell = null;
-    }
+    clearSelectedCell();
 
     const cell1El = matrixCells[cell1.row][cell1.col];
     const cell2El = matrixCells[cell2.row][cell2.col];
@@ -1864,78 +2346,45 @@ async function swapFruits(cell1, cell2) {
     const temp = board[cell1.row][cell1.col];
     board[cell1.row][cell1.col] = board[cell2.row][cell2.col];
     board[cell2.row][cell2.col] = temp;
-
     renderBoard();
 
-    let rainbowActivated = false;
-    const rainbowPos = [cell1, cell2].find(p => board[p.row][p.col] && board[p.row][p.col].bonus === 'rainbow');
-    if (rainbowPos) {
-        const other = rainbowPos === cell1 ? cell2 : cell1;
-        const partner = board[other.row][other.col];
-        const partnerType = partner && partner.type;
-
-        if (partnerType && partnerType === 'rainbow') {
-            // Радуга + радуга: очищаем всё поле
-            rainbowActivated = true;
-            playSoundRainbow();
-            score += 100;
-            updateScoreDisplay();
-            for (let r = 0; r < BOARD_SIZE; r++) {
-                for (let c = 0; c < BOARD_SIZE; c++) {
-                    if (board[r][c]) spawnRainbowParticles(r, c);
-                    board[r][c] = null;
-                }
-            }
-            showMessage('МЕГА-РАДУГА! 🌈');
-            await dropFruits();
-            await fillEmptySpaces();
-            renderBoard();
-        } else if (partnerType && partnerType !== 'rainbow') {
-            rainbowActivated = true;
-            playSoundRainbow();
-            score += 50;
-            updateScoreDisplay();
-            // Радуга + бомба: взрыв всего поля
-            const partnerIsBomb = partner && partner.bonus === 'bomb';
-            for (let r = 0; r < BOARD_SIZE; r++) {
-                for (let c = 0; c < BOARD_SIZE; c++) {
-                    if (partnerIsBomb) {
-                        board[r][c] = null;
-                        spawnBombParticles(r, c);
-                    } else if (board[r][c] && board[r][c].type === partnerType && board[r][c].bonus !== 'rainbow') {
-                        board[r][c] = null;
-                        spawnMatchParticles(r, c, partnerType);
-                    }
-                }
-            }
-            spawnRainbowParticles(rainbowPos.row, rainbowPos.col);
-            board[rainbowPos.row][rainbowPos.col] = null;
-            if (partnerIsBomb) {
-                showMessage('Радуга + Бомба! 💥');
-                playSoundBomb();
-            } else {
-                showMessage('Радуга! 🌈');
-            }
-            await dropFruits();
-            await fillEmptySpaces();
-            renderBoard();
-        }
+    const special = buildSpecialPairDetonation(cell1, cell2);
+    if (special) {
+        playSoundBomb();
+        showMessage(special.message);
+        await detonateCells(special.seeds, {
+            rainbowTargets: special.rainbowTargets,
+            extraScore: special.extraScore
+        });
+        onPlayerMatch();
+        isProcessing = false;
+        resetHintTimer();
+        if (!hasValidMoves() && !gameOverShown && !isPaused) await shuffleBoard();
+        return;
     }
 
     const matches = findMatches();
-
     if (matches.length > 0) {
         comboCount = 0;
         await processMatches();
         onPlayerMatch();
-        matchesThisGame += matches.length;
-    } else if (!rainbowActivated) {
-        playSoundInvalid();
-        flashInvalidCells(cell1, cell2);
-        const temp2 = board[cell1.row][cell1.col];
-        board[cell1.row][cell1.col] = board[cell2.row][cell2.col];
-        board[cell2.row][cell2.col] = temp2;
-        renderBoard();
+    } else {
+        // Бонус (бомба/звезда), которым ударили по обычному фрукту, срабатывает.
+        const bonusCells = [cell1, cell2].filter(pos => {
+            const f = board[pos.row][pos.col];
+            return f && (f.bonus === 'bomb' || f.bonus === 'star');
+        });
+        if (bonusCells.length > 0) {
+            await detonateCells(bonusCells);
+            onPlayerMatch();
+        } else {
+            playSoundInvalid();
+            flashInvalidCells(cell1, cell2);
+            const temp2 = board[cell1.row][cell1.col];
+            board[cell1.row][cell1.col] = board[cell2.row][cell2.col];
+            board[cell2.row][cell2.col] = temp2;
+            renderBoard();
+        }
     }
 
     isProcessing = false;
@@ -2040,7 +2489,8 @@ function findLTForms(allMatches) {
             ltForms.push({
                 cells: ltCells,
                 center: intersection[0],
-                totalLength: totalCells
+                totalLength: totalCells,
+                indices: [i, j]
             });
         }
     }
@@ -2050,158 +2500,142 @@ function findLTForms(allMatches) {
 // ===== PROCESS MATCHES =====
 async function processMatches() {
     let matches = findMatches();
+    let guard = 0;
 
-    while (matches.length > 0) {
+    while (matches.length > 0 && guard++ < 60) {
         comboCount++;
+        matchesThisGame += matches.length;
+        trackTaskProgress('matches', matches.length);
 
-        // Find L/T forms before processing (for star creation)
         const ltForms = findLTForms(matches);
-        const ltCenters = new Set(ltForms.map(lt => lt.center.row + ',' + lt.center.col));
+        const ltMatchIndices = new Set();
+        const starForms = new Map();
 
+        ltForms.forEach(lt => {
+            lt.indices.forEach(i => ltMatchIndices.add(i));
+            const key = cellKey(lt.center.row, lt.center.col);
+            if (!starForms.has(key)) starForms.set(key, lt);
+        });
+
+        const clearKeys = new Set();
+        const creationByKey = new Map();
         let matchScore = 0;
-        const allMatchedCells = new Set();
-        let createdBonuses = [];
+        let createdCount = 0;
 
-        for (const match of matches) {
-            const matchLength = match.cells.length;
-            let baseScore = 0;
-            const centerCell = match.cells[Math.floor(match.cells.length / 2)];
-            let createdBonus = null;
+        const addMatchCells = cells => {
+            cells.forEach(c => clearKeys.add(cellKey(c.row, c.col)));
+        };
 
-            if (matchLength === 3) {
-                baseScore = 10;
-            } else if (matchLength === 4) {
-                baseScore = 50;
-                const bombType = board[centerCell.row][centerCell.col].type;
-                board[centerCell.row][centerCell.col] = { type: bombType, bonus: 'bomb' };
-                createdBonus = 'bomb';
+        // 1) Фигуры L/T дают звезду в точке пересечения.
+        starForms.forEach((lt, key) => {
+            const centerFruit = board[lt.center.row] && board[lt.center.row][lt.center.col];
+            if (centerFruit && !centerFruit.bonus) {
+                creationByKey.set(key, 'star');
+            }
+            addMatchCells(lt.cells);
+            matchScore += 150;
+        });
+
+        // 2) Прямые линии: 4 → бомба, 5+ → радуга.
+        for (let i = 0; i < matches.length; i++) {
+            if (ltMatchIndices.has(i)) continue;
+
+            const match = matches[i];
+            const len = match.cells.length;
+            matchScore += len >= 5 ? 120 : len === 4 ? 60 : 15;
+            addMatchCells(match.cells);
+
+            const wantBonus = len >= 5 ? 'rainbow' : len === 4 ? 'bomb' : null;
+            if (!wantBonus) continue;
+
+            const center = match.cells[Math.floor(len / 2)];
+            const ordered = [...match.cells].sort((a, b) => {
+                const da = Math.abs(a.row - center.row) + Math.abs(a.col - center.col);
+                const db = Math.abs(b.row - center.row) + Math.abs(b.col - center.col);
+                return da - db;
+            });
+            const freeCell = ordered.find(c => {
+                const f = board[c.row][c.col];
+                return f && !f.bonus && !creationByKey.has(cellKey(c.row, c.col));
+            });
+            if (freeCell) {
+                creationByKey.set(cellKey(freeCell.row, freeCell.col), wantBonus);
+            }
+        }
+
+        creationByKey.forEach((bonus, key) => clearKeys.delete(key));
+
+        // Сначала создаём бонусы, чтобы они не были стёрты очисткой.
+        creationByKey.forEach((bonus, key) => {
+            const { row, col } = keyToPos(key);
+            const base = board[row][col];
+            if (!base) return;
+            if (bonus === 'bomb') {
+                board[row][col] = { type: base.type, bonus: 'bomb' };
                 bombsCreatedThisGame++;
                 addDiamonds(1);
-            } else if (matchLength >= 5) {
-                baseScore = 100;
-                // L/T center becomes star, otherwise rainbow
-                if (ltCenters.has(centerCell.row + ',' + centerCell.col)) {
-                    board[centerCell.row][centerCell.col] = { type: 'star', bonus: 'star' };
-                    createdBonus = 'star';
-                    starsCreatedThisGame++;
-                    addDiamonds(3);
-                } else {
-                    board[centerCell.row][centerCell.col] = { type: 'rainbow', bonus: 'rainbow' };
-                    createdBonus = 'rainbow';
-                    rainbowsCreatedThisGame++;
-                    addDiamonds(2);
-                }
-            }
-
-            matchScore += baseScore;
-
-            for (const cell of match.cells) {
-                if (matchLength < 4 || cell.row !== centerCell.row || cell.col !== centerCell.col) {
-                    allMatchedCells.add(`${cell.row},${cell.col}`);
-                    spawnMatchParticles(cell.row, cell.col, board[cell.row] && board[cell.row][cell.col] && board[cell.row][cell.col].type);
-                }
-            }
-
-            if (createdBonus) {
-                createdBonuses.push({ row: centerCell.row, col: centerCell.col, bonus: createdBonus });
-            }
-        }
-
-        const comboMultiplier = comboCount >= 5 ? 5 : comboCount >= 3 ? 3 : comboCount >= 2 ? 2 : 1;
-        matchScore *= comboMultiplier;
-        score += matchScore;
-        updateScoreDisplay();
-
-        if (createdBonuses.length > 0) {
-            playSoundMatch();
-            if (createdBonuses.some(b => b.bonus === 'bomb')) {
-                showMessage('💣 Бомба! Совмести 3 фрукта того же вида, чтобы взорвать');
-            }
-            if (createdBonuses.some(b => b.bonus === 'star')) {
-                showMessage('⭐ Звезда! Взрывает ряд и колонку!');
-            }
-        }
-
-        if (comboMultiplier > 1) {
-            showComboIndicator(comboMultiplier);
-            playSoundCombo(comboMultiplier);
-        } else if (createdBonuses.length === 0) {
-            playSoundMatch();
-        }
-
-        const bonusCells = [];
-        allMatchedCells.forEach(key => {
-            const [row, col] = key.split(',').map(Number);
-            if (board[row][col] && board[row][col].bonus) {
-                bonusCells.push({ row, col, bonus: board[row][col].bonus });
+                createdCount++;
+            } else if (bonus === 'rainbow') {
+                board[row][col] = { type: 'rainbow', bonus: 'rainbow' };
+                rainbowsCreatedThisGame++;
+                addDiamonds(2);
+                createdCount++;
+            } else if (bonus === 'star') {
+                board[row][col] = { type: base.type, bonus: 'star' };
+                starsCreatedThisGame++;
+                addDiamonds(3);
+                createdCount++;
             }
         });
 
-        for (const bonusCell of bonusCells) {
-            if (bonusCell.bonus === 'bomb') {
-                for (let r = bonusCell.row - 1; r <= bonusCell.row + 1; r++) {
-                    for (let c = bonusCell.col - 1; c <= bonusCell.col + 1; c++) {
-                        if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
-                            allMatchedCells.add(`${r},${c}`);
-                        }
-                    }
-                }
-                spawnBombParticles(bonusCell.row, bonusCell.col);
-                score += 20;
-                playSoundBomb();
-            } else if (bonusCell.bonus === 'rainbow') {
-                const targetType = FRUIT_TYPES[Math.floor(Math.random() * FRUIT_TYPES.length)];
-                for (let r = 0; r < BOARD_SIZE; r++) {
-                    for (let c = 0; c < BOARD_SIZE; c++) {
-                        if (board[r][c] && board[r][c].type === targetType && !board[r][c].bonus) {
-                            allMatchedCells.add(`${r},${c}`);
-                            spawnMatchParticles(r, c, targetType);
-                        }
-                    }
-                }
-                spawnRainbowParticles(bonusCell.row, bonusCell.col);
-                score += 50;
-                playSoundRainbow();
-            } else if (bonusCell.bonus === 'star') {
-                // Star explodes entire row AND column
-                for (let c = 0; c < BOARD_SIZE; c++) {
-                    allMatchedCells.add(`${bonusCell.row},${c}`);
-                    spawnStarParticles(bonusCell.row, c);
-                }
-                for (let r = 0; r < BOARD_SIZE; r++) {
-                    if (r !== bonusCell.row) {
-                        allMatchedCells.add(`${r},${bonusCell.col}`);
-                        spawnStarParticles(r, bonusCell.col);
-                    }
-                }
-                spawnStarParticles(bonusCell.row, bonusCell.col);
-                score += 80;
-                playSoundStar();
-            }
-        }
+        if (createdCount > 0) trackTaskProgress('bonus', createdCount);
 
-        updateScoreDisplay();
-
-        allMatchedCells.forEach(key => {
-            const [row, col] = key.split(',').map(Number);
-            const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
-            if (cell && cell.querySelector('.fruit')) {
-                cell.classList.add('matched');
-            }
+        const seedCells = [...clearKeys].map(keyToPos);
+        const cascade = collectClearCascade(seedCells, {
+            protect: new Set(creationByKey.keys())
         });
 
-        await sleep(160);
+        const multiplier = comboCount >= 5 ? 5 : comboCount >= 3 ? 3 : comboCount >= 2 ? 2 : 1;
+        score += matchScore * multiplier + cascade.scoreGain;
+        updateScoreDisplay();
 
-        allMatchedCells.forEach(key => {
-            const [row, col] = key.split(',').map(Number);
+        cascade.cells.forEach((key, idx) => {
+            if (cascade.cells.size > 22 && idx % 2 !== 0) return;
+            const { row, col } = keyToPos(key);
+            const f = board[row][col];
+            if (f && f.type) spawnMatchParticles(row, col, f.type);
+        });
+
+        cascade.cells.forEach(key => {
+            const { row, col } = keyToPos(key);
+            const el = matrixCells[row] && matrixCells[row][col];
+            if (el && el.querySelector('.fruit')) el.classList.add('matched');
+        });
+
+        if (createdCount > 0) {
+            playSoundMatch();
+            const types = [...creationByKey.values()];
+            if (types.includes('star')) showMessage('⭐ Звезда! Сносит ряд и колонку');
+            else if (types.includes('rainbow')) showMessage('🌈 Радуга! Свапни с любым фруктом');
+            else showMessage('💣 Бомба! Совмести с фруктом, чтобы взорвать');
+        } else if (multiplier > 1) {
+            showComboIndicator(multiplier);
+            playSoundCombo(multiplier);
+        } else {
+            playSoundMatch();
+        }
+
+        await sleep(190);
+
+        cascade.cells.forEach(key => {
+            const { row, col } = keyToPos(key);
             board[row][col] = null;
         });
 
         await dropFruits();
         await fillEmptySpaces();
-
         renderBoard();
-        await sleep(80);
+        await sleep(70);
 
         matches = findMatches();
     }
@@ -2420,6 +2854,8 @@ function updateScoreDisplay() {
     scoreDisplay.textContent = score;
     bestScoreDisplay.textContent = bestScore;
 
+    setTaskProgress('score', score);
+
     if (score > bestScore && bestScoreLoaded) {
         const prevBest = bestScore;
         bestScore = score;
@@ -2542,11 +2978,24 @@ async function handleBoosterBoardClick(row, col) {
         isProcessing = true;
         playSoundSelect();
         renderBoard();
-        if (findMatches().length > 0) {
+
+        const special = buildSpecialPairDetonation(a, b);
+        if (special) {
+            playSoundBomb();
+            showMessage(special.message);
+            await detonateCells(special.seeds, {
+                rainbowTargets: special.rainbowTargets,
+                extraScore: special.extraScore
+            });
+            onPlayerMatch();
+        } else if (findMatches().length > 0) {
             comboCount = 0;
             await processMatches();
+            onPlayerMatch();
         }
+
         isProcessing = false;
+        resetHintTimer();
         if (!hasValidMoves() && !gameOverShown && !isPaused) await shuffleBoard();
         return;
     }
@@ -2559,39 +3008,27 @@ async function handleBoosterBoardClick(row, col) {
             for (let c = 0; c < BOARD_SIZE; c++) cells.push({ row, col: c });
             for (let r = 0; r < BOARD_SIZE; r++) if (r !== row) cells.push({ row: r, col });
         }
-        const bonusScore = activeBooster === 'hammer' ? 10 : 45;
         const boosterId = activeBooster;
+        const bonusScore = boosterId === 'hammer' ? 10 : 45;
         consumeBooster(boosterId);
         cancelActiveBooster();
 
         isProcessing = true;
         playSoundBomb();
-        await clearCellsAndCascade(cells);
-        score += bonusScore;
-        updateScoreDisplay();
+        if (boosterId === 'rocket') {
+            spawnEffectBeam(row, col, 'row');
+            spawnEffectBeam(row, col, 'col');
+            shakeBoard('hard');
+        }
+        await detonateCells(cells, { extraScore: bonusScore });
         isProcessing = false;
+        resetHintTimer();
         if (!hasValidMoves() && !gameOverShown && !isPaused) await shuffleBoard();
     }
 }
 
 async function clearCellsAndCascade(cells) {
-    cells.forEach(({ row, col }) => {
-        const cellEl = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
-        if (cellEl && cellEl.querySelector('.fruit')) {
-            cellEl.classList.add('matched');
-        }
-    });
-    await sleep(280);
-    cells.forEach(({ row, col }) => {
-        board[row][col] = null;
-    });
-    await dropFruits();
-    await fillEmptySpaces();
-    renderBoard();
-    if (findMatches().length > 0) {
-        comboCount = 0;
-        await processMatches();
-    }
+    await detonateCells(cells);
 }
 
 // ===== STORE =====
@@ -2778,8 +3215,30 @@ function buildHelpExamples() {
     let bombHtml = '';
     for (let i = 0; i < 4; i++) bombHtml += '<div class="h-cell hit">' + fruitSvgHtml('apple', g()) + '</div>';
     bombHtml += '<div class="h-arrow">→</div>';
-    bombHtml += '<div class="h-cell hit"><span class="bomb-badge">💣</span>' + fruitSvgHtml('apple', g()) + '</div>';
+    bombHtml += '<div class="h-cell hit"><span class="bomb-badge">' + iconHtml('bomb') + '</span>' + fruitSvgHtml('apple', g()) + '</div>';
     bombEl.innerHTML = bombHtml;
+
+    // Пример: фигура T из лимонов -> звезда
+    const starEl = document.getElementById('help-example-star');
+    if (starEl) {
+        const shape = [
+            ['lemon', 'lemon', 'lemon'],
+            [null, 'lemon', null],
+            [null, 'lemon', null]
+        ];
+        let grid = '<div style="display:grid;grid-template-columns:repeat(3,34px);gap:3px;">';
+        shape.forEach(row => {
+            row.forEach(type => {
+                grid += type
+                    ? '<div class="h-cell hit" style="width:34px;height:34px;flex:none;">' + fruitSvgHtml(type, g()) + '</div>'
+                    : '<div style="width:34px;height:34px;"></div>';
+            });
+        });
+        grid += '</div>';
+        grid += '<div class="h-arrow">→</div>';
+        grid += '<div class="h-cell hit" style="width:44px;height:44px;flex:none;">' + bonusSvgHtml('star', g()) + '</div>';
+        starEl.innerHTML = grid;
+    }
 
     // Пример: 5 клубник в ряд -> радуга
     const rainbowEl = document.getElementById('help-example-rainbow');
@@ -2788,6 +3247,271 @@ function buildHelpExamples() {
     rainbowHtml += '<div class="h-arrow">→</div>';
     rainbowHtml += '<div class="h-cell hit">' + bonusSvgHtml('rainbow', g()) + '</div>';
     rainbowEl.innerHTML = rainbowHtml;
+}
+
+// ===== TUTORIAL (v2) =====
+const TUTORIAL_KEY = 'fruitBlastTutorialDoneV2';
+let tutorialActive = false;
+let tutorialStepIndex = 0;
+let tutorialRoot = null;
+let tutorialResumeTimer = false;
+let tutorialResizeTimer = null;
+let tutorialSteps = [];
+
+const TUTORIAL_HAND_SVG = `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><path d="M26 7a6 6 0 0 1 6 6v16h2V15a5 5 0 0 1 10 0v14h2v-7a5 5 0 0 1 10 0v19c0 10-7.5 18-17 18h-5c-6.5 0-12-3.5-15-9l-6.5-12a5 5 0 0 1 8-6L26 37V13a6 6 0 0 1 0-6Z" fill="#fffdf7" stroke="#3a2158" stroke-width="3" stroke-linejoin="round"/><path d="M32 29V13a3 3 0 0 1 6 0v16" fill="none" stroke="#d9c9f2" stroke-width="1.6"/><circle cx="24" cy="52" r="10" fill="none" stroke="#ffc24b" stroke-width="2.6" opacity=".9"/></svg>`;
+
+function buildTutorialSteps() {
+    return [
+        {
+            badge: 'ЦЕЛЬ ИГРЫ',
+            title: 'Добро пожаловать в Fruit Blast!',
+            text: 'За 20 минут собери как можно больше очков. Меняй соседние фрукты местами, чтобы собрать 3 и больше одинаковых в ряд.',
+            target: '.game-board',
+            placement: 'bottom'
+        },
+        {
+            badge: 'СВАЙП',
+            title: 'Меняй фрукты местами',
+            text: 'Проведи пальцем по фрукту в сторону соседнего или нажми на два соседних фрукта по очереди. Совпадение исчезнет, а сверху упадут новые.',
+            target: '.game-board',
+            placement: 'bottom',
+            hand: true
+        },
+        {
+            badge: 'БОНУСЫ',
+            title: 'Бомба · Звезда · Радуга',
+            text: 'Собери 4 в ряд — получишь бомбу, фигуру L/T — звезду, 5 в ряд — радугу. Свапни бонус с фруктом, чтобы активировать его. Взрывы запускают цепную реакцию!',
+            target: '.game-board',
+            placement: 'center',
+            bonusRow: true
+        },
+        {
+            badge: 'КОМБО',
+            title: 'Держи серию',
+            text: 'Собирай совпадения подряд: каждое следующее в течение 5 секунд увеличивает множитель очков — до x5. Каскады тоже приносят больше очков.',
+            target: '.game-header',
+            placement: 'bottom'
+        },
+        {
+            badge: 'БУСТЕРЫ',
+            title: 'Помощники на поле',
+            text: 'Молоток разбивает клетку, ракета сносит ряд и колонку, обмен меняет любые две клетки. Если под удар попал бонус — он тоже сработает.',
+            target: '.boost-panel',
+            placement: 'top'
+        },
+        {
+            badge: 'ЗАДАНИЯ',
+            title: 'Играй и получай алмазы',
+            text: 'Каждый день — 3 новых задания. Выполняй их и забирай алмазы, а в магазине покупай бустеры. Удачи!',
+            target: '#tasks-btn',
+            placement: 'bottom'
+        }
+    ];
+}
+
+function hasSeenTutorial() {
+    return new Promise(resolve => {
+        try {
+            if (localStorage.getItem(TUTORIAL_KEY) === '1') { resolve(true); return; }
+        } catch (e) {}
+        if (!vkAvailable()) { resolve(false); return; }
+        vkStorageGet(TUTORIAL_KEY).then(v => resolve(v === '1')).catch(() => resolve(false));
+    });
+}
+
+function maybeShowTutorial(force) {
+    let seenLocally = false;
+    try { seenLocally = localStorage.getItem(TUTORIAL_KEY) === '1'; } catch (e) {}
+    if (!force && seenLocally) return;
+    (force ? Promise.resolve(false) : hasSeenTutorial()).then(seen => {
+        if (!seen) setTimeout(() => startTutorial(), 350);
+    });
+}
+
+function startTutorial() {
+    if (tutorialActive || gameOverShown) return;
+    tutorialActive = true;
+    tutorialStepIndex = 0;
+    tutorialSteps = buildTutorialSteps();
+
+    tutorialResumeTimer = gameStarted && !isPaused && !gameOverShown;
+    if (tutorialResumeTimer) {
+        stopGameTimer();
+        isPaused = true;
+        cancelActiveBooster();
+        hideHint();
+    }
+
+    tutorialRoot = document.createElement('div');
+    tutorialRoot.className = 'tutorial-root';
+    tutorialRoot.id = 'tutorial-root';
+    document.body.appendChild(tutorialRoot);
+
+    window.addEventListener('resize', scheduleTutorialLayout);
+    window.addEventListener('scroll', scheduleTutorialLayout, true);
+    document.addEventListener('keydown', handleTutorialKey);
+
+    renderTutorialStep();
+}
+
+function scheduleTutorialLayout() {
+    if (!tutorialActive) return;
+    if (tutorialResizeTimer) clearTimeout(tutorialResizeTimer);
+    tutorialResizeTimer = setTimeout(() => {
+        if (tutorialActive) renderTutorialStep();
+    }, 130);
+}
+
+function handleTutorialKey(e) {
+    if (!tutorialActive) return;
+    if (e.key === 'ArrowRight' || e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        nextTutorialStep();
+    } else if (e.key === 'Escape') {
+        e.preventDefault();
+        finishTutorial();
+    }
+}
+
+function renderTutorialStep() {
+    if (!tutorialActive || !tutorialRoot) return;
+    const step = tutorialSteps[tutorialStepIndex];
+    if (!step) { finishTutorial(); return; }
+
+    tutorialRoot.innerHTML = '';
+
+    const targetEl = step.target ? document.querySelector(step.target) : null;
+    const rect = targetEl ? targetEl.getBoundingClientRect() : null;
+    const hasSpot = !!rect && rect.width > 0 && rect.height > 0;
+
+    const dim = document.createElement('div');
+    dim.className = 'tutorial-dim';
+    if (hasSpot) dim.style.background = 'transparent';
+    tutorialRoot.appendChild(dim);
+
+    if (hasSpot) {
+        const spot = document.createElement('div');
+        spot.className = 'tutorial-spotlight';
+        spot.style.left = (rect.left - 6) + 'px';
+        spot.style.top = (rect.top - 6) + 'px';
+        spot.style.width = (rect.width + 12) + 'px';
+        spot.style.height = (rect.height + 12) + 'px';
+        tutorialRoot.appendChild(spot);
+
+        if (step.hand) {
+            const hand = document.createElement('div');
+            hand.className = 'tutorial-hand';
+            hand.innerHTML = TUTORIAL_HAND_SVG;
+            hand.style.left = (rect.left + rect.width * 0.30) + 'px';
+            hand.style.top = (rect.top + rect.height * 0.45) + 'px';
+            tutorialRoot.appendChild(hand);
+        }
+    }
+
+    const card = document.createElement('div');
+    card.className = 'tutorial-card';
+
+    let bonusRow = '';
+    if (step.bonusRow) {
+        const items = [
+            { type: 'bomb', label: '4 в ряд' },
+            { type: 'star', label: 'L / T' },
+            { type: 'rainbow', label: '5 в ряд' }
+        ];
+        bonusRow = '<div class="tutorial-bonus-row">' + items.map((it, i) =>
+            `<div class="tutorial-bonus">${BONUS_SVG[it.type].split('{ID}').join('tut' + i)}<span>${it.label}</span></div>`
+        ).join('') + '</div>';
+    }
+
+    const dots = tutorialSteps.map((_, i) =>
+        `<span class="tutorial-dot ${i === tutorialStepIndex ? 'active' : ''}"></span>`
+    ).join('');
+
+    card.innerHTML = `
+        <div class="tutorial-badge">${step.badge}</div>
+        <div class="tutorial-title">${step.title}</div>
+        <div class="tutorial-text">${step.text}</div>
+        ${bonusRow}
+        <div class="tutorial-actions">
+            <div class="tutorial-dots">${dots}</div>
+            <div style="display:flex;align-items:center;gap:6px;">
+                <button class="tutorial-skip" id="tutorial-skip">Пропустить</button>
+                <button class="tutorial-next" id="tutorial-next">${tutorialStepIndex === tutorialSteps.length - 1 ? 'ПОЕХАЛИ!' : 'ДАЛЕЕ'}</button>
+            </div>
+        </div>
+    `;
+    tutorialRoot.appendChild(card);
+
+    // Позиционируем карточку после вставки, когда известна её высота.
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const cardW = Math.min(vw * 0.88, 370);
+    const cardH = card.offsetHeight;
+    let left = (vw - cardW) / 2;
+    let top;
+
+    if (!hasSpot) {
+        top = (vh - cardH) / 2;
+    } else if (step.placement === 'center') {
+        top = Math.max(14, (vh - cardH) / 2);
+    } else if (step.placement === 'top') {
+        top = rect.top - cardH - 16;
+        if (top < 14) top = Math.min(rect.bottom + 16, vh - cardH - 14);
+    } else {
+        top = rect.bottom + 16;
+        if (top + cardH > vh - 14) top = Math.max(14, rect.top - cardH - 16);
+    }
+
+    if (hasSpot) {
+        left = Math.min(Math.max(12, rect.left + rect.width / 2 - cardW / 2), vw - cardW - 12);
+    }
+    top = Math.min(Math.max(14, top), Math.max(14, vh - cardH - 14));
+
+    card.style.left = left + 'px';
+    card.style.top = top + 'px';
+    card.style.width = cardW + 'px';
+
+    const nextBtn = document.getElementById('tutorial-next');
+    if (nextBtn) nextBtn.addEventListener('click', nextTutorialStep);
+    const skipBtn = document.getElementById('tutorial-skip');
+    if (skipBtn) skipBtn.addEventListener('click', finishTutorial);
+}
+
+function nextTutorialStep() {
+    if (!tutorialActive) return;
+    if (tutorialStepIndex >= tutorialSteps.length - 1) {
+        finishTutorial();
+        return;
+    }
+    tutorialStepIndex++;
+    renderTutorialStep();
+}
+
+function finishTutorial() {
+    if (!tutorialActive) return;
+    tutorialActive = false;
+    try { localStorage.setItem(TUTORIAL_KEY, '1'); } catch (e) {}
+    vkStorageSet(TUTORIAL_KEY, '1');
+
+    window.removeEventListener('resize', scheduleTutorialLayout);
+    window.removeEventListener('scroll', scheduleTutorialLayout, true);
+    document.removeEventListener('keydown', handleTutorialKey);
+
+    if (tutorialRoot) {
+        tutorialRoot.remove();
+        tutorialRoot = null;
+    }
+    if (tutorialResizeTimer) {
+        clearTimeout(tutorialResizeTimer);
+        tutorialResizeTimer = null;
+    }
+
+    if (tutorialResumeTimer) {
+        tutorialResumeTimer = false;
+        isPaused = false;
+        updateTimerDisplay();
+        if (!gameOverShown) startGameTimer();
+    }
 }
 
 // ===== EVENT LISTENERS =====
@@ -2817,6 +3541,7 @@ resumeContinueBtn.addEventListener('click', () => {
 resumeNewBtn.addEventListener('click', () => {
     clearSavedGame();
     initGame();
+    setTimeout(() => maybeShowTutorial(false), 420);
 });
 restartBtn.addEventListener('click', () => {
     if (vkAvailable()) {
@@ -2969,6 +3694,8 @@ window.addEventListener('pagehide', () => {
 });
 
 // ===== BOOT =====
+hydrateDecorations();
+
 async function boot() {
     // Init VK Bridge (required before any VK API calls)
     await initVkBridge();
@@ -3013,8 +3740,9 @@ async function boot() {
     // Есть ли незавершённая игра (таймер остановлен, сохранено состояние)?
     const pending = loadSavedGame();
     gameStarted = true;
+    const hasPendingGame = !!(pending && pending.timeLeft > 0 && !pending.gameOver);
 
-    if (pending && pending.timeLeft > 0 && !pending.gameOver) {
+    if (hasPendingGame) {
         savedGame = pending;
         restoreSavedGame(pending);
         stopGameTimer();
@@ -3032,6 +3760,15 @@ async function boot() {
     setTimeout(() => {
         if (loadingOverlay) loadingOverlay.remove();
     }, 500);
+
+    if (!hasPendingGame) {
+        let forceTutorial = false;
+        try {
+            const params = new URLSearchParams((window.location.search || '') + '&' + (window.location.hash || '').replace(/^#/, ''));
+            forceTutorial = params.get('tutorial') === '1';
+        } catch (e) {}
+        setTimeout(() => maybeShowTutorial(forceTutorial), 560);
+    }
 
     // Report game ready to VK
     if (vkAvailable()) {

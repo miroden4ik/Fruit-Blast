@@ -2,6 +2,17 @@
 // Использует CONFIG.WORKER_URL из js/config.js
 // Поля: vk_user_id, first_name, last_name, photo_100, score
 
+const LB_FETCH_TIMEOUT_MS = 12000;
+const LB_SUBMIT_TIMEOUT_MS = 10000;
+
+function _fetchWithTimeout(url, options, timeoutMs) {
+    if (typeof AbortController === 'undefined') return fetch(url, options);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    return fetch(url, Object.assign({}, options, { signal: controller.signal }))
+        .finally(() => clearTimeout(timer));
+}
+
 /**
  * Отправляет счёт пользователя на сервер лидерборда
  * Обновляет рекорд только если новый score выше старого
@@ -34,14 +45,14 @@ async function submitScoreAsync(score, userInfoObj) {
             return { success: false, error: 'vk_user_id required' };
         }
 
-        const response = await fetch(workerUrl + '/submit', {
+        const response = await _fetchWithTimeout(workerUrl + '/submit', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             },
             body: JSON.stringify(payload)
-        });
+        }, LB_SUBMIT_TIMEOUT_MS);
 
         if (!response.ok) {
             throw new Error('HTTP ' + response.status + ' ' + response.statusText);
@@ -57,7 +68,7 @@ async function submitScoreAsync(score, userInfoObj) {
 
 /**
  * Загружает топ-100 лидеров с сервера
- * @returns {Promise<Array>} - массив игроков [{ vk_user_id, first_name, last_name, photo_100, score }]
+ * @returns {Promise<Array|null>} - массив игроков; null, если загрузка не удалась
  */
 async function fetchLeaderboardAsync() {
     const workerUrl = (typeof CONFIG !== 'undefined' && CONFIG.WORKER_URL)
@@ -66,14 +77,14 @@ async function fetchLeaderboardAsync() {
 
     if (!workerUrl || workerUrl.includes('REPLACE_WITH_YOUR_WORKER_URL')) {
         console.warn('[leaderboard] WORKER_URL не настроен в js/config.js.');
-        return [];
+        return null;
     }
 
     try {
-        const response = await fetch(workerUrl + '/leaderboard', {
+        const response = await _fetchWithTimeout(workerUrl + '/leaderboard', {
             method: 'GET',
             headers: { 'Accept': 'application/json' }
-        });
+        }, LB_FETCH_TIMEOUT_MS);
 
         if (!response.ok) {
             throw new Error('HTTP ' + response.status + ' ' + response.statusText);
@@ -86,7 +97,7 @@ async function fetchLeaderboardAsync() {
         return Array.isArray(data) ? data : [];
     } catch (err) {
         console.warn('[leaderboard] fetchLeaderboard failed:', err && err.message ? err.message : err);
-        return [];
+        return null;
     }
 }
 
@@ -96,22 +107,36 @@ function _fullName(user) {
 }
 
 function _avatarEl(src, size, borderStyle) {
+    const wrap = document.createElement('div');
+    wrap.className = 'lb-avatar-wrap';
+    wrap.style.cssText =
+        'position:relative;width:' + size + 'px;height:' + size + 'px;border-radius:50%;' +
+        'flex-shrink:0;overflow:hidden;' +
+        (borderStyle || 'border:2px solid rgba(255,255,255,0.85);box-shadow:0 2px 8px rgba(0,0,0,0.15);');
+
+    const ph = _avatarPlaceholder(size);
+    ph.style.cssText += ';position:absolute;inset:0;border:none;box-shadow:none;';
+    wrap.appendChild(ph);
+
     const img = document.createElement('img');
     img.alt = '';
     img.className = 'lb-avatar-img';
-    if (src) {
-        img.src = src;
-    } else {
-        img.src = '';
-        img.style.display = 'none';
-    }
     img.style.cssText =
-        'width:' + size + 'px;height:' + size + 'px;border-radius:50%;object-fit:cover;flex-shrink:0;' +
-        (borderStyle || 'border:2px solid rgba(255,255,255,0.85);box-shadow:0 2px 8px rgba(0,0,0,0.15);');
+        'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%;';
     img.onerror = function () {
         img.style.display = 'none';
     };
-    return img;
+    img.onload = function () {
+        img.style.display = '';
+        ph.style.display = 'none';
+    };
+    if (src) {
+        img.src = src;
+    } else {
+        img.style.display = 'none';
+    }
+    wrap.appendChild(img);
+    return wrap;
 }
 
 function _avatarPlaceholder(size) {
@@ -129,6 +154,37 @@ function _avatarPlaceholder(size) {
 
 function _hasAvatar(user) {
     return !!(user && user.photo_100);
+}
+
+function _renderLeaderboardError(containerEl, onRetry) {
+    containerEl.innerHTML = '';
+    const errEl = document.createElement('div');
+    errEl.className = 'lb-error';
+    errEl.innerHTML =
+        '<div class="lb-error-icon">📡</div>' +
+        '<div class="lb-error-title">Не удалось загрузить таблицу</div>' +
+        '<div class="lb-error-sub">Проверьте соединение и попробуйте ещё раз</div>';
+    errEl.style.cssText = 'padding:30px 16px;text-align:center;';
+    errEl.querySelector('.lb-error-icon').style.cssText = 'font-size:40px;margin-bottom:8px;';
+    errEl.querySelector('.lb-error-title').style.cssText =
+        'font-weight:800;font-size:15px;color:#C0392B;margin-bottom:4px;';
+    errEl.querySelector('.lb-error-sub').style.cssText =
+        'font-size:13px;color:#888;line-height:1.45;margin-bottom:14px;';
+
+    if (typeof onRetry === 'function') {
+        const retryBtn = document.createElement('button');
+        retryBtn.className = 'lb-retry-btn';
+        retryBtn.textContent = 'ПОВТОРИТЬ';
+        retryBtn.style.cssText =
+            'padding:10px 22px;border:none;border-radius:12px;cursor:pointer;' +
+            'font-weight:800;font-size:13px;letter-spacing:0.4px;color:#fff;' +
+            'background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);' +
+            'box-shadow:0 6px 16px rgba(102,126,234,0.35);';
+        retryBtn.addEventListener('click', onRetry);
+        errEl.appendChild(retryBtn);
+    }
+
+    containerEl.appendChild(errEl);
 }
 
 /**
@@ -152,9 +208,17 @@ async function openLeaderboardUIEnhanced(containerEl, currentVkUserId, userNameF
         '<div class="lb-loading-text">Загрузка таблицы лидеров...</div>';
     containerEl.appendChild(loading);
 
+    const retry = () => openLeaderboardUIEnhanced(
+        containerEl, currentVkUserId, userNameFull, userAvatarUrl, currentScoreNow, onData
+    );
+
     try {
         const users = await fetchLeaderboardAsync();
         containerEl.innerHTML = '';
+        if (users === null) {
+            _renderLeaderboardError(containerEl, retry);
+            return;
+        }
 
         const allUsers = Array.isArray(users) ? users : [];
         if (typeof onData === 'function') onData(allUsers);
@@ -183,6 +247,7 @@ async function openLeaderboardUIEnhanced(containerEl, currentVkUserId, userNameF
 
         slots.forEach(slot => {
             const user = top3[slot.idx];
+            if (!user) return;
             const placeCard = document.createElement('div');
             placeCard.className = 'lb-podium-slot lb-place-' + slot.rank;
             if (user && user.vk_user_id != null) {
@@ -243,7 +308,7 @@ async function openLeaderboardUIEnhanced(containerEl, currentVkUserId, userNameF
             medalBadge.className = 'lb-medal-badge';
             medalBadge.textContent = medal;
             medalBadge.style.cssText =
-                'position:absolute;bottom:-4px;right:-6px;font-size:20px;line-height:1;' +
+                'position:absolute;top:-4px;right:-6px;font-size:20px;line-height:1;' +
                 'filter:drop-shadow(0 2px 4px rgba(0,0,0,0.25));';
             avWrap.appendChild(medalBadge);
             playerWrap.appendChild(avWrap);
@@ -253,9 +318,10 @@ async function openLeaderboardUIEnhanced(containerEl, currentVkUserId, userNameF
             nameP.textContent = _fullName(user) || ('Игрок ' + slot.rank);
             nameP.title = nameP.textContent;
             nameP.style.cssText =
-                'font-weight:800;font-size:13px;color:#2c2c3a;text-align:center;' +
-                'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;' +
-                'width:100%;max-width:100px;margin-bottom:2px;';
+                'font-weight:800;font-size:12px;color:#2c2c3a;text-align:center;' +
+                'line-height:1.18;display:-webkit-box;-webkit-line-clamp:2;' +
+                '-webkit-box-orient:vertical;overflow:hidden;word-break:break-word;' +
+                'width:100%;max-width:104px;margin-bottom:3px;';
             playerWrap.appendChild(nameP);
 
             const scoreP = document.createElement('div');
@@ -294,16 +360,17 @@ async function openLeaderboardUIEnhanced(containerEl, currentVkUserId, userNameF
             podium.appendChild(placeCard);
         });
 
-        containerEl.appendChild(podium);
+        if (allUsers.length > 0) {
+            containerEl.appendChild(podium);
 
-        // ===== РАЗДЕЛИТЕЛЬ =====
-        const divider = document.createElement('div');
-        divider.className = 'lb-divider';
-        divider.style.cssText =
-            'height:1px;margin:8px 4px 10px;' +
-            'background:linear-gradient(90deg,transparent,#d8d8e8,transparent);';
-        containerEl.appendChild(divider);
-
+            // ===== РАЗДЕЛИТЕЛЬ =====
+            const divider = document.createElement('div');
+            divider.className = 'lb-divider';
+            divider.style.cssText =
+                'height:1px;margin:8px 4px 10px;' +
+                'background:linear-gradient(90deg,transparent,#d8d8e8,transparent);';
+            containerEl.appendChild(divider);
+        }
         // ===== СПИСОК 4..100 СО СКРОЛЛОМ =====
         const listScroll = document.createElement('div');
         listScroll.className = 'lb-list-scroll';
@@ -445,7 +512,7 @@ async function openLeaderboardUIEnhanced(containerEl, currentVkUserId, userNameF
                 ? ('<span class="lb-self-rank-num">#' + myRank + '</span>')
                 : '<span class="lb-self-rank-placeholder">Вне топ-100</span>';
             rankSelf.style.cssText =
-                'min-width:70px;text-align:center;';
+                'min-width:54px;text-align:center;';
             if (myRank) {
                 rankSelf.querySelector('.lb-self-rank-num').style.cssText =
                     'font-weight:900;font-size:18px;color:#8B4513;' +
@@ -474,10 +541,10 @@ async function openLeaderboardUIEnhanced(containerEl, currentVkUserId, userNameF
             infoS.style.cssText = 'flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;';
             const nameS = document.createElement('div');
             nameS.className = 'lb-self-name';
-            nameS.textContent = (userNameFull || 'Вы') + ' (вы)';
+            nameS.textContent = userNameFull || 'Вы';
             nameS.title = nameS.textContent;
             nameS.style.cssText =
-                'font-weight:800;font-size:14px;color:#2c2c3a;' +
+                'font-weight:800;font-size:13px;color:#2c2c3a;' +
                 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
             infoS.appendChild(nameS);
 
@@ -524,20 +591,7 @@ async function openLeaderboardUIEnhanced(containerEl, currentVkUserId, userNameF
         }
     } catch (err) {
         console.error('[leaderboard] render error:', err);
-        containerEl.innerHTML = '';
-        const errEl = document.createElement('div');
-        errEl.className = 'lb-error';
-        errEl.innerHTML =
-            '<div class="lb-error-icon">⚠️</div>' +
-            '<div class="lb-error-title">Не удалось загрузить таблицу лидеров</div>' +
-            '<div class="lb-error-sub">Попробуйте открыть позже</div>';
-        errEl.style.cssText = 'padding:30px 16px;text-align:center;';
-        errEl.querySelector('.lb-error-icon').style.cssText = 'font-size:40px;margin-bottom:8px;';
-        errEl.querySelector('.lb-error-title').style.cssText =
-            'font-weight:800;font-size:15px;color:#C0392B;margin-bottom:4px;';
-        errEl.querySelector('.lb-error-sub').style.cssText =
-            'font-size:13px;color:#888;';
-        containerEl.appendChild(errEl);
+        _renderLeaderboardError(containerEl, retry);
     }
 }
 
@@ -549,11 +603,22 @@ async function openLeaderboardUIEnhanced(containerEl, currentVkUserId, userNameF
  */
 function diffUpdateLeaderboard(containerEl, freshUsers, currentVkUserId, currentScoreNow) {
     if (!containerEl || !containerEl.parentNode) return false;
-    const users = Array.isArray(freshUsers) ? freshUsers : [];
+    if (!Array.isArray(freshUsers)) return false;
+    const users = freshUsers;
+
+    if (containerEl.querySelector('.lb-error')) return false;
 
     const podium = containerEl.querySelector('.lb-podium');
     const listScroll = containerEl.querySelector('.lb-list-scroll');
     const selfCard = containerEl.querySelector('.lb-self-card');
+
+    // Если состояние списка не совпадает с данными — нужен полный ререндер.
+    if (listScroll) {
+        const hasFullEmpty = !!listScroll.querySelector('.lb-empty:not(.lb-empty-small)');
+        const hasCompactEmpty = !!listScroll.querySelector('.lb-empty-small');
+        if (hasFullEmpty !== (users.length === 0)) return false;
+        if (hasCompactEmpty !== (users.length > 0 && users.length <= 3)) return false;
+    }
 
     let totalChanged = 0;
     const setTextSafe = (el, text) => {
@@ -575,6 +640,11 @@ function diffUpdateLeaderboard(containerEl, freshUsers, currentVkUserId, current
         el.dataset[k] = String(v);
         totalChanged++;
     };
+
+    if (podium) {
+        const renderedSlots = podium.querySelectorAll('.lb-podium-slot').length;
+        if (renderedSlots !== Math.min(users.length, 3)) return false;
+    }
 
     // === Top-3 podium ===
     if (podium) {
