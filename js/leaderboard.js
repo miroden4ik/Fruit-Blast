@@ -38,7 +38,9 @@ async function submitScoreAsync(score, userInfoObj) {
             last_name: info.last_name != null ? info.last_name : '',
             photo_100: info.photo_100 != null ? info.photo_100 : info.avatar,
             score: Number(score) || 0,
-            vk_sign_params: info.vk_sign_params || info.signParams || null
+            vk_sign_params: info.vk_sign_params || info.signParams || null,
+            session_token: info.session_token || null,
+            play_time: Number(info.play_time) || 0
         };
 
         if (!payload.vk_user_id) {
@@ -68,9 +70,10 @@ async function submitScoreAsync(score, userInfoObj) {
 
 /**
  * Загружает топ-100 лидеров с сервера
+ * @param {'all'|'week'} [period='all'] - всё время или текущая неделя
  * @returns {Promise<Array|null>} - массив игроков; null, если загрузка не удалась
  */
-async function fetchLeaderboardAsync() {
+async function fetchLeaderboardAsync(period) {
     const workerUrl = (typeof CONFIG !== 'undefined' && CONFIG.WORKER_URL)
         ? CONFIG.WORKER_URL.replace(/\/$/, '')
         : null;
@@ -81,7 +84,8 @@ async function fetchLeaderboardAsync() {
     }
 
     try {
-        const response = await _fetchWithTimeout(workerUrl + '/leaderboard', {
+        const query = period === 'week' ? '?period=week' : '';
+        const response = await _fetchWithTimeout(workerUrl + '/leaderboard' + query, {
             method: 'GET',
             headers: { 'Accept': 'application/json' }
         }, LB_FETCH_TIMEOUT_MS);
@@ -98,6 +102,50 @@ async function fetchLeaderboardAsync() {
     } catch (err) {
         console.warn('[leaderboard] fetchLeaderboard failed:', err && err.message ? err.message : err);
         return null;
+    }
+}
+
+async function fetchWeeklyStatusAsync(uid) {
+    const workerUrl = (typeof CONFIG !== 'undefined' && CONFIG.WORKER_URL)
+        ? CONFIG.WORKER_URL.replace(/\/$/, '')
+        : null;
+    if (!workerUrl || workerUrl.includes('REPLACE_WITH_YOUR_WORKER_URL') || !uid) return null;
+    try {
+        const response = await _fetchWithTimeout(
+            workerUrl + '/weekly/status?vk_user_id=' + encodeURIComponent(uid),
+            { method: 'GET', headers: { 'Accept': 'application/json' } },
+            LB_FETCH_TIMEOUT_MS
+        );
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const data = await response.json();
+        return data && data.success ? data : null;
+    } catch (err) {
+        console.warn('[leaderboard] weekly status failed:', err && err.message ? err.message : err);
+        return null;
+    }
+}
+
+async function claimWeeklyRewardAsync(uid, week) {
+    const workerUrl = (typeof CONFIG !== 'undefined' && CONFIG.WORKER_URL)
+        ? CONFIG.WORKER_URL.replace(/\/$/, '')
+        : null;
+    if (!workerUrl || workerUrl.includes('REPLACE_WITH_YOUR_WORKER_URL') || !uid || !week) {
+        return { success: false, error: 'not_configured' };
+    }
+    try {
+        const response = await _fetchWithTimeout(workerUrl + '/weekly/claim', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ vk_user_id: uid, week: week })
+        }, LB_SUBMIT_TIMEOUT_MS);
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            return { success: false, error: data.error || ('HTTP ' + response.status) };
+        }
+        return data || { success: false };
+    } catch (err) {
+        console.warn('[leaderboard] weekly claim failed:', err && err.message ? err.message : err);
+        return { success: false, error: err && err.message ? err.message : String(err) };
     }
 }
 
@@ -194,8 +242,10 @@ function _renderLeaderboardError(containerEl, onRetry) {
  * @param {string} userNameFull - полное имя текущего игрока (для карточки себя если вне списка)
  * @param {string} [userAvatarUrl] - URL аватарки текущего игрока
  * @param {number} [currentScoreNow] - текущий счёт игрока (не обязательно рекорд)
+ * @param {Function} [onData] - колбэк с загруженным массивом
+ * @param {'all'|'week'} [period='all'] - период таблицы
  */
-async function openLeaderboardUIEnhanced(containerEl, currentVkUserId, userNameFull, userAvatarUrl, currentScoreNow, onData) {
+async function openLeaderboardUIEnhanced(containerEl, currentVkUserId, userNameFull, userAvatarUrl, currentScoreNow, onData, period) {
     if (!containerEl) return;
 
     containerEl.innerHTML = '';
@@ -209,11 +259,11 @@ async function openLeaderboardUIEnhanced(containerEl, currentVkUserId, userNameF
     containerEl.appendChild(loading);
 
     const retry = () => openLeaderboardUIEnhanced(
-        containerEl, currentVkUserId, userNameFull, userAvatarUrl, currentScoreNow, onData
+        containerEl, currentVkUserId, userNameFull, userAvatarUrl, currentScoreNow, onData, period
     );
 
     try {
-        const users = await fetchLeaderboardAsync();
+        const users = await fetchLeaderboardAsync(period);
         containerEl.innerHTML = '';
         if (users === null) {
             _renderLeaderboardError(containerEl, retry);
@@ -781,6 +831,8 @@ function diffUpdateLeaderboard(containerEl, freshUsers, currentVkUserId, current
 window._leaderboard = {
     submitScoreAsync: submitScoreAsync,
     fetchLeaderboardAsync: fetchLeaderboardAsync,
+    fetchWeeklyStatusAsync: fetchWeeklyStatusAsync,
+    claimWeeklyRewardAsync: claimWeeklyRewardAsync,
     openLeaderboardUIEnhanced: openLeaderboardUIEnhanced,
     diffUpdateLeaderboard: diffUpdateLeaderboard
 };

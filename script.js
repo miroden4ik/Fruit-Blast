@@ -100,9 +100,9 @@ function buildTaskName(def, target) {
 
 // ===== BOOSTERS & DIAMONDS =====
 const BOOSTER_DEFS = {
-    hammer: { name: 'Молоток', icon: '🔨', price: 10 },
-    rocket: { name: 'Ракета', icon: '🚀', price: 20 },
-    swap: { name: 'Обмен', icon: '🔄', price: 15 }
+    hammer: { name: 'Молоток', icon: '🔨', price: 15 },
+    rocket: { name: 'Ракета', icon: '🚀', price: 25 },
+    swap: { name: 'Обмен', icon: '🔄', price: 20 }
 };
 const BOOSTER_IDS = Object.keys(BOOSTER_DEFS);
 
@@ -114,13 +114,13 @@ const DIAMOND_PACKS = {
     diam_large:  { qty: 1200, votes: 128, price: '128 голосов' },
     diam_mega:   { qty: 2500, votes: 214, price: '214 голосов' }
 };
-const DIAMONDS_PER_SCORE = 250;
+const DIAMONDS_PER_SCORE = 400;
 
 // Paid booster packs (VK order items priced in votes, 1 vote = 7 rubles)
 const BOOSTER_PACKS = {
-    hammer: { id: 'hammer_pack', qty: 3,  votes: 7 },
-    rocket: { id: 'rocket_pack', qty: 3,  votes: 11 },
-    swap:   { id: 'swap_pack',   qty: 3,  votes: 10 }
+    hammer: { id: 'hammer_pack', qty: 6, votes: 7 },
+    rocket: { id: 'rocket_pack', qty: 5, votes: 11 },
+    swap:   { id: 'swap_pack',   qty: 5, votes: 10 }
 };
 
 function votesLabel(n) {
@@ -203,7 +203,8 @@ const VK_KEYS = {
     best: 'fruitBlastBestScore',
     data: 'fruitBlastData',
     stats: 'fruitBlastStats',
-    dailyTasks: 'fruitBlastDailyTasks'
+    dailyTasks: 'fruitBlastDailyTasks',
+    progression: 'fruitBlastProgression'
 };
 const _CS_ALL_KEYS = Object.values(VK_KEYS);
 
@@ -247,7 +248,8 @@ const _CS = {
     lbRefreshId: null,
     lbMs: 10000,
     lbCacheUntil: 0,
-    lbCached: null
+    lbCached: null,
+    lbCachedPeriod: 'all'
 };
 
 function _cs_safeParseJSON(str, fallback) {
@@ -265,7 +267,7 @@ function _cs_mergeStats(localObj, remoteObj) {
     if (!localObj && !remoteObj) return gameStats;
     const baseL = localObj || {};
     const baseR = remoteObj || {};
-    const keys = ['gamesPlayed', 'totalScore', 'bestScore', 'bestCombo', 'totalCombos', 'bombsCreated', 'rainbowsCreated', 'totalMatches', 'totalPlayTimeSec'];
+    const keys = ['gamesPlayed', 'totalScore', 'bestScore', 'bestCombo', 'totalCombos', 'bombsCreated', 'rainbowsCreated', 'starsCreated', 'totalMatches', 'totalPlayTimeSec'];
     const out = Object.assign({}, gameStats || {});
     keys.forEach(k => { out[k] = Math.max(Number(baseL[k] || 0), Number(baseR[k] || 0), Number(out[k] || 0)); });
     return out;
@@ -411,7 +413,8 @@ function _cs_localReadAll() {
         best: localStorage.getItem('fruitBlastBestScore'),
         data: localStorage.getItem(VK_KEYS.data),
         stats: localStorage.getItem('fruitBlastStats'),
-        dailyTasks: localStorage.getItem('fruitBlastDailyTasks')
+        dailyTasks: localStorage.getItem('fruitBlastDailyTasks'),
+        progression: localStorage.getItem(VK_KEYS.progression)
     };
 }
 
@@ -423,6 +426,7 @@ function cloudSync_pullAll() {
         const rData = (remote && remote[VK_KEYS.data] != null) ? remote[VK_KEYS.data] : null;
         const rStats = (remote && remote[VK_KEYS.stats] != null) ? remote[VK_KEYS.stats] : null;
         const rTasks = (remote && remote[VK_KEYS.dailyTasks] != null) ? remote[VK_KEYS.dailyTasks] : null;
+        const rProgression = (remote && remote[VK_KEYS.progression] != null) ? remote[VK_KEYS.progression] : null;
 
         const localSound = local.sound;
         const bestSound = _cs_mergeSound(localSound, rSound);
@@ -445,6 +449,8 @@ function cloudSync_pullAll() {
         const localTasksObj = _cs_safeParseJSON(local.dailyTasks, null);
         const remoteTasksObj = _cs_safeParseJSON(rTasks, null);
         const mergedTasks = _cs_mergeTasks(localTasksObj, remoteTasksObj);
+
+        if (window._pg && rProgression) window._pg.mergeRemote(rProgression);
 
         const runtimeState = {
             sound: bestSound,
@@ -487,6 +493,13 @@ function cloudSync_pushAllImmediate() {
                 try { localStorage.setItem('fruitBlastDailyTasks', vStr); } catch (e) {}
                 break;
             }
+            case VK_KEYS.progression: {
+                if (window._pg) {
+                    vStr = window._pg.serialize();
+                    try { localStorage.setItem(VK_KEYS.progression, vStr); } catch (e) {}
+                }
+                break;
+            }
         }
         if (vStr != null) calls.push(vkStorageSet(key, vStr));
     });
@@ -519,6 +532,7 @@ function cloudSync_renderUI() {
     try { renderTasksModalIfOpen(); } catch (e) {}
     try { renderProfileModalIfOpen(); } catch (e) {}
     try { renderStoreIfOpen(); } catch (e) {}
+    try { if (window._pg) window._pg.refreshUI(); } catch (e) {}
 }
 
 function cloudSync_fullSync(pullOnly) {
@@ -552,8 +566,8 @@ function cloudSync_prepareForModal(name) {
     const pull = cloudSync_fullSync(true);
     return pull.then(res => {
         if (window._leaderboard && name === 'leaderboard') {
-            // дополнительный синхронный пуш рекорда перед показом
-            if (score > 0 || bestScore > 0) submitLeaderboard(Math.max(score, bestScore));
+            // дополнительный синхронный пуш текущего счёта перед показом
+            if (score > 0) submitLeaderboard(score);
         }
         return res;
     });
@@ -588,13 +602,6 @@ function fetchUserInfo() {
                 userAvatar.src = res.photo_100;
                 userAvatar.hidden = false;
             }
-            setTimeout(() => {
-                if (bestScoreLoaded && bestScore > 0) {
-                    submitLeaderboard(bestScore);
-                } else if (score > 0) {
-                    submitLeaderboard(score);
-                }
-            }, 1200);
         }
     }).catch(() => {});
 }
@@ -925,7 +932,11 @@ function flushAllSaves() {
     return cloudSync_flushNow();
 }
 
-function addDiamonds(n) {
+function addDiamonds(n, source) {
+    if (n > 0 && source === 'play' && window._pg) {
+        n = window._pg.allowGameplayDiamonds(n);
+        if (n <= 0) return;
+    }
     diamonds += n;
     if (diamonds < 0) diamonds = 0;
     if (n > 0 && gameStarted && !gameOverShown) diamondsEarnedThisGame += n;
@@ -975,7 +986,7 @@ function rewardDiamondsForScore() {
     if (target > diamondsAwardedForScore) {
         const gained = target - diamondsAwardedForScore;
         diamondsAwardedForScore = target;
-        if (gained > 0) addDiamonds(gained);
+        if (gained > 0) addDiamonds(gained, 'play');
     }
 }
 
@@ -1117,6 +1128,11 @@ function endGameByTime() {
     pauseModal.classList.remove('active');
     updateDailyTasksBadge();
 
+    if (window._pg) {
+        window._pg.track('game_end', { score: score, play_time: playTime });
+        window._pg.evaluateAchievements();
+    }
+
     if (score > 0) {
         setTimeout(() => submitLeaderboard(score), 400);
     }
@@ -1186,6 +1202,7 @@ function restoreSavedGame(state) {
     pauseModal.classList.remove('active');
     leaderboardModal.classList.remove('active');
     startGameTimer();
+    if (window._pg) window._pg.onGameStart({ resumed: true });
 }
 
 function showResumeModal() {
@@ -1203,14 +1220,26 @@ let _lbSubmitThrottleUntil = 0;
 let _lbSubmitPending = false;
 let _lbLastSubmittedScore = -1;
 let _lbSyncIntervalId = null;
+let _lbSessionRetry = false;
 const LB_SUBMIT_MIN_INTERVAL_MS = 15000;
 const LB_SYNC_PERIODIC_MS = 20000;
 
-function submitLeaderboard(forceScore) {
+function submitLeaderboard(forceScore, skipSession) {
     if (!currentUser.vk_user_id || !window._leaderboard) return Promise.resolve();
 
     const scoreToSend = typeof forceScore === 'number' ? forceScore : score;
     if (scoreToSend < 0) return Promise.resolve();
+
+    const sessionData = window._pg ? window._pg.getSessionData() : {};
+    if (window._pg && !sessionData.session_token && !_lbSessionRetry && !skipSession) {
+        _lbSessionRetry = true;
+        window._pg.startSession().then(ok => {
+            _lbSessionRetry = false;
+            if (ok) setTimeout(() => submitLeaderboard(forceScore), 2200);
+            else submitLeaderboard(forceScore, true); // воркер без /session/start — шлём как раньше
+        });
+        return Promise.resolve({ queued: true });
+    }
 
     const now = Date.now();
     if (now < _lbSubmitThrottleUntil && scoreToSend <= _lbLastSubmittedScore && !forceScore) {
@@ -1229,15 +1258,35 @@ function submitLeaderboard(forceScore) {
         first_name: currentUser.first_name,
         last_name: currentUser.last_name,
         photo_100: currentUser.photo_100,
-        vk_sign_params: vkSignParamsStr || null
+        vk_sign_params: vkSignParamsStr || null,
+        session_token: sessionData.session_token || null,
+        play_time: sessionData.play_time || 0
     }).then(res => {
+        if (res && res.success === false && res.error === 'session_too_early' && !_lbSessionRetry) {
+            _lbSessionRetry = true;
+            setTimeout(() => {
+                _lbSessionRetry = false;
+                submitLeaderboard(forceScore);
+            }, 2300);
+            return res;
+        }
+        if (res && res.success === false && /^session_/.test(res.error || '') && !_lbSessionRetry) {
+            _lbSessionRetry = true;
+            if (window._pg) window._pg.resetSession();
+            const start = window._pg ? window._pg.startSession() : Promise.resolve(false);
+            start.then(ok => {
+                _lbSessionRetry = false;
+                if (ok) setTimeout(() => submitLeaderboard(forceScore), 2300);
+            });
+            return res;
+        }
         if (res) {
             if (res.updated) {
                 console.log('[leaderboard] ✓ Новый рекорд сохранён:', res.new_score);
                 _lbLastSubmittedScore = Math.max(_lbLastSubmittedScore, res.new_score || 0);
             } else if (res.score != null) {
                 _lbLastSubmittedScore = Math.max(_lbLastSubmittedScore, res.score);
-            } else {
+            } else if (res.success !== false) {
                 _lbLastSubmittedScore = Math.max(_lbLastSubmittedScore, scoreToSend);
             }
         } else {
@@ -1267,23 +1316,55 @@ function stopLeaderboardRealtimeSync() {
     }
 }
 
-function showLeaderboard() {
-    leaderboardModal.classList.add('active');
-    if (window._leaderboard) {
-        window._leaderboard.openLeaderboardUIEnhanced(
-            leaderboardList,
-            currentUser.vk_user_id,
-            currentUser.first_name + (currentUser.last_name ? ' ' + currentUser.last_name : ''),
-            currentUser.photo_100,
-            score,
-            (users) => {
-                _CS.lbCached = Array.isArray(users) ? users : [];
-                _CS.lbCacheUntil = Date.now() + _CS.lbMs;
-            }
-        );
-    } else {
+let _lbPeriod = 'all';
+
+function syncLeaderboardTabs() {
+    document.querySelectorAll('#lb-tabs .lb-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.period === _lbPeriod);
+    });
+    const weeklyEl = document.getElementById('weekly-status');
+    if (weeklyEl) weeklyEl.style.display = _lbPeriod === 'week' ? '' : 'none';
+    const content = leaderboardModal ? leaderboardModal.querySelector('.leaderboard-content') : null;
+    if (content) content.classList.toggle('week-mode', _lbPeriod === 'week');
+}
+
+function renderLeaderboardPeriod() {
+    if (!window._leaderboard) {
         leaderboardList.innerHTML = '<div class="leaderboard-empty">Модуль лидерборда не загружен.</div>';
+        return;
     }
+    window._leaderboard.openLeaderboardUIEnhanced(
+        leaderboardList,
+        currentUser.vk_user_id,
+        currentUser.first_name + (currentUser.last_name ? ' ' + currentUser.last_name : ''),
+        currentUser.photo_100,
+        score,
+        (users) => {
+            _CS.lbCached = Array.isArray(users) ? users : [];
+            _CS.lbCachedPeriod = _lbPeriod;
+            _CS.lbCacheUntil = Date.now() + _CS.lbMs;
+        },
+        _lbPeriod
+    );
+    if (_lbPeriod === 'week' && window._pg) window._pg.loadWeeklyStatus(false);
+}
+
+function showLeaderboard() {
+    _lbPeriod = 'all';
+    syncLeaderboardTabs();
+    leaderboardModal.classList.add('active');
+    renderLeaderboardPeriod();
+    if (window._pg) window._pg.track('leaderboard_open', { period: _lbPeriod });
+    startLeaderboardRefresh();
+}
+
+function switchLeaderboardPeriod(period) {
+    if (period !== 'week' && period !== 'all') return;
+    if (_lbPeriod === period) return;
+    _lbPeriod = period;
+    syncLeaderboardTabs();
+    renderLeaderboardPeriod();
+    if (window._pg) window._pg.track('leaderboard_open', { period: _lbPeriod });
     startLeaderboardRefresh();
 }
 
@@ -1298,12 +1379,14 @@ function startLeaderboardRefresh() {
         try {
             let users;
             const now = Date.now();
-            if (_CS.lbCached && now < _CS.lbCacheUntil) {
+            const cacheValid = _CS.lbCached && _CS.lbCachedPeriod === _lbPeriod && now < _CS.lbCacheUntil;
+            if (cacheValid) {
                 users = _CS.lbCached;
             } else {
-                users = await window._leaderboard.fetchLeaderboardAsync();
+                users = await window._leaderboard.fetchLeaderboardAsync(_lbPeriod);
                 if (!Array.isArray(users)) return;
                 _CS.lbCached = users;
+                _CS.lbCachedPeriod = _lbPeriod;
                 _CS.lbCacheUntil = now + _CS.lbMs;
             }
             if (!Array.isArray(users)) return;
@@ -1319,8 +1402,10 @@ function startLeaderboardRefresh() {
                     score,
                     (fresh) => {
                         _CS.lbCached = Array.isArray(fresh) ? fresh : [];
+                        _CS.lbCachedPeriod = _lbPeriod;
                         _CS.lbCacheUntil = Date.now() + _CS.lbMs;
-                    }
+                    },
+                    _lbPeriod
                 );
             }
         } catch (e) {
@@ -1442,6 +1527,7 @@ let gameStats = {
     totalCombos: 0,
     bombsCreated: 0,
     rainbowsCreated: 0,
+    starsCreated: 0,
     totalMatches: 0,
     totalPlayTimeSec: 0
 };
@@ -1469,6 +1555,7 @@ function recordGameEnd(finalScore, playTimeSec) {
     gameStats.totalCombos += totalCombosThisGame;
     gameStats.bombsCreated += bombsCreatedThisGame;
     gameStats.rainbowsCreated += rainbowsCreatedThisGame;
+    gameStats.starsCreated = (Number(gameStats.starsCreated) || 0) + starsCreatedThisGame;
     gameStats.totalMatches += matchesThisGame;
     gameStats.totalPlayTimeSec += playTimeSec;
     saveStats();
@@ -1530,10 +1617,15 @@ function showProfileModal() {
                 </div>
             </div>
             <div class="stats-grid">${cardsHtml}</div>
+            <div class="profile-pg-actions">
+                <button class="pg-profile-btn" type="button" data-pg-action="achievements">🏅 ДОСТИЖЕНИЯ <span id="profile-ach-count">0/0</span></button>
+                <button class="pg-profile-btn" type="button" data-pg-action="notifications" id="profile-notifications-btn">🔔 ВКЛЮЧИТЬ НАПОМИНАНИЯ</button>
+            </div>
             <button class="play-again-btn" id="profile-close-btn">ЗАКРЫТЬ</button>
         </div>
     `;
     document.body.appendChild(modal);
+    if (window._pg) window._pg.refreshUI();
     document.getElementById('profile-close-btn').addEventListener('click', () => modal.remove());
     modal.addEventListener('click', (e) => {
         if (e.target === modal) modal.remove();
@@ -1878,9 +1970,7 @@ function initGame() {
 
     resetHintTimer();
 
-    if (bestScore > 0 && bestScoreLoaded) {
-        setTimeout(() => submitLeaderboard(bestScore), 1500);
-    }
+    if (window._pg) window._pg.onGameStart({ resumed: false });
 }
 function createBoard() {
     board = [];
@@ -2573,17 +2663,17 @@ async function processMatches() {
             if (bonus === 'bomb') {
                 board[row][col] = { type: base.type, bonus: 'bomb' };
                 bombsCreatedThisGame++;
-                addDiamonds(1);
+                addDiamonds(1, 'play');
                 createdCount++;
             } else if (bonus === 'rainbow') {
                 board[row][col] = { type: 'rainbow', bonus: 'rainbow' };
                 rainbowsCreatedThisGame++;
-                addDiamonds(2);
+                addDiamonds(2, 'play');
                 createdCount++;
             } else if (bonus === 'star') {
                 board[row][col] = { type: base.type, bonus: 'star' };
                 starsCreatedThisGame++;
-                addDiamonds(3);
+                addDiamonds(3, 'play');
                 createdCount++;
             }
         });
@@ -2943,6 +3033,7 @@ function cancelActiveBooster() {
 function consumeBooster(id) {
     if (boosters[id] > 0) boosters[id]--;
     persistUserData();
+    if (window._pg) window._pg.onBoosterUsed();
 }
 
 async function handleBoosterBoardClick(row, col) {
@@ -3038,7 +3129,9 @@ function openStore() {
     hidePurchaseBar();
     updateBoostPanel();
     updateDiamondUI();
+    if (window._pg) window._pg.refreshUI();
     storeModal.classList.add('active');
+    if (window._pg) window._pg.track('store_open');
 }
 
 function closeStore() {
@@ -3080,7 +3173,7 @@ function showPurchaseBarFor(id) {
 // VK rewarded ads: VKWebAppShowNativeAds (ad_format: 'reward')
 function watchRewardedAd() {
     return new Promise(resolve => {
-        if (!vkAvailable()) { resolve(true); return; }
+        if (!vkAvailable()) { resolve(false); return; }
         vkBridge.send('VKWebAppShowNativeAds', { ad_format: 'reward' })
             .then(() => resolve(true))
             .catch(() => resolve(false));
@@ -3091,10 +3184,12 @@ async function purchaseBoosterByAd(id) {
     if (!storeSelectedBooster && !id) return;
     const bId = id || storeSelectedBooster;
     const ok = await watchRewardedAd();
+    if (window._pg) window._pg.track('ad_watch', { booster: bId, success: ok });
     if (ok) {
         boosters[bId]++;
         persistUserData();
         updateBoostPanel();
+        if (window._pg) window._pg.onAdWatched(true);
         showMessage('+1 ' + BOOSTER_DEFS[bId].icon + ' ' + BOOSTER_DEFS[bId].name);
     } else {
         showMessage('Реклама не была досмотрена');
@@ -3116,85 +3211,20 @@ function purchaseBoosterByDiamonds(id) {
     showMessage('+1 ' + def.icon + ' ' + def.name);
 }
 
-// Buy a booster pack for real money via VK order box
-// Монетизация пока недоступна — покупки только "Скоро" (визуал).
-// Когда настроишь товары в консоли VK и станешь плательщиком, раскомментируй
-// флоу ниже (VKWebAppGetOrderItems -> ShowOrderBox -> CheckOrder) и включи
-// начисление товара через addDiamonds / boosters.
+// Покупка пакета бустеров за голоса VK (VKWebAppShowOrderBox).
+// Товары описаны в Worker (PAYMENT_ITEMS), оплата приходит в /vk-pay.
 function buyBoosterPack(id) {
     const bId = id || storeSelectedBooster;
     const pack = BOOSTER_PACKS[bId];
     if (!pack) return;
-    showMessage('🚧 Покупка пакетов скоро');
-    return;
-
-    /*
-    // === РЕАЛЬНЫЙ ПЛАТЁЖНЫЙ ФЛОУ (включить при монетизации) ===
-    async function buyBoosterPackReal(id) {
-        const bId = id || storeSelectedBooster;
-        const pack = BOOSTER_PACKS[bId];
-        if (!pack) return;
-        if (!vkAvailable()) {
-            showMessage('Покупки доступны только в VK Mini Apps');
-            return;
-        }
-        try {
-            const itemsRes = await vkBridge.send('VKWebAppGetOrderItems', {});
-            const items = itemsRes.items || [];
-            if (!items.includes(pack.id)) {
-                showMessage('Товар не найден. Создайте его в консоли VK');
-                return;
-            }
-            const orderRes = await vkBridge.send('VKWebAppShowOrderBox', { type: 'item', item: pack.id });
-            if (!orderRes || !orderRes.success) return;
-            const check = await vkBridge.send('VKWebAppCheckOrder', { type: 'item', item: pack.id, user_id: '' });
-            if (check && check.success) {
-                boosters[bId] += pack.qty;
-                persistUserData();
-                updateBoostPanel();
-                showMessage('Оплата голосами прошла! +' + pack.qty + ' ' + BOOSTER_DEFS[bId].icon + ' ' + BOOSTER_DEFS[bId].name);
-            }
-        } catch (e) {
-            showMessage('Покупка отменена или не удалась');
-        }
-    }
-    */
+    if (window._pg) window._pg.purchaseItem(pack.id);
 }
 
-// Монетизация пока недоступна — покупки алмазов только "Скоро" (визуал).
-// Когда настроишь товары и станешь плательщиком, используй реальный флоу ниже.
-async function buyDiamondPack(packId) {
+// Покупка пакета алмазов за голоса VK.
+function buyDiamondPack(packId) {
     const pack = DIAMOND_PACKS[packId];
     if (!pack) return;
-    showMessage('🚧 Покупка алмазов скоро');
-    return;
-
-    /* === РЕАЛЬНЫЙ ПЛАТЁЖНЫЙ ФЛОУ (включить при монетизации) ===
-    if (!vkAvailable()) {
-        showMessage('Покупки доступны только в VK Mini Apps');
-        return;
-    }
-    try {
-        // 1. VKWebAppGetOrderItems - товары, настроенные в консоли VK
-        const itemsRes = await vkBridge.send('VKWebAppGetOrderItems', {});
-        const items = itemsRes.items || [];
-        if (!items.includes(packId)) {
-            showMessage('Товар не найден. Настройте его в консоли VK');
-            return;
-        }
-        // 2. VKWebAppShowOrderBox - нативное окно оплаты
-        const orderRes = await vkBridge.send('VKWebAppShowOrderBox', { type: 'item', item: packId });
-        if (!orderRes || !orderRes.success) return;
-        // 3. VKWebAppCheckOrder - подтверждение заказа
-        const check = await vkBridge.send('VKWebAppCheckOrder', { type: 'item', item: packId, user_id: '' });
-        if (check && check.success) {
-            addDiamonds(pack.qty);
-            showMessage('Оплата голосами прошла! +' + pack.qty + ' 💎');
-        }
-    } catch (e) {
-        showMessage('Покупка отменена или не удалась');
-    }
-    */
+    if (window._pg) window._pg.purchaseItem(packId);
 }
 
 // ===== HELP =====
@@ -3579,6 +3609,9 @@ leaderboardCloseBtn.addEventListener('click', () => {
     leaderboardModal.classList.remove('active');
     stopLeaderboardRefresh();
 });
+document.querySelectorAll('#lb-tabs .lb-tab').forEach(btn => {
+    btn.addEventListener('click', () => switchLeaderboardPeriod(btn.dataset.period));
+});
 leaderboardResultsBtn.addEventListener('click', () => {
     cloudSync_prepareForModal('leaderboard').finally(() => showLeaderboard());
 });
@@ -3599,6 +3632,7 @@ if (userInfo) {
 if (shareGameoverBtn && window._share) {
     shareGameoverBtn.addEventListener('click', () => {
         const isBest = score >= bestScore;
+        if (window._pg) window._pg.track('share', { score: score });
         window._share.shareScore(score, isBest);
     });
 }
@@ -3677,16 +3711,20 @@ window.addEventListener('pagehide', () => {
             const workerUrl = (typeof CONFIG !== 'undefined' && CONFIG.WORKER_URL)
                 ? CONFIG.WORKER_URL.replace(/\/$/, '')
                 : null;
-            if (workerUrl && !workerUrl.includes('REPLACE_WITH_YOUR_WORKER_URL') && navigator.sendBeacon) {
+            const sessionData = window._pg ? window._pg.getSessionData() : {};
+            if (workerUrl && !workerUrl.includes('REPLACE_WITH_YOUR_WORKER_URL') &&
+                navigator.sendBeacon && sessionData.session_token) {
                 const payload = {
                     vk_user_id: currentUser.vk_user_id,
                     first_name: currentUser.first_name,
                     last_name: currentUser.last_name,
                     photo_100: currentUser.photo_100,
                     score: Math.max(score, bestScore || 0),
-                    vk_sign_params: vkSignParamsStr || null
+                    vk_sign_params: vkSignParamsStr || null,
+                    session_token: sessionData.session_token,
+                    play_time: sessionData.play_time || 0
                 };
-                const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+                const blob = new Blob([JSON.stringify(payload)], { type: 'text/plain;charset=UTF-8' });
                 navigator.sendBeacon(workerUrl + '/submit', blob);
             }
         } catch (_) {}
@@ -3733,6 +3771,8 @@ async function boot() {
     loadDailyTasks();
     updateDailyTasksBadge();
 
+    if (window._pg) window._pg.init();
+
     // Cloud sync: полная синхронизация после загрузки, затем периодический интервал
     cloudSync_fullSync(false);
     cloudSync_startInterval();
@@ -3778,6 +3818,8 @@ async function boot() {
             bg_color: '#667eea'
         }).catch(() => {});
     }
+
+    if (window._pg) window._pg.afterBoot({ hasPendingGame: hasPendingGame });
 }
 
 boot();

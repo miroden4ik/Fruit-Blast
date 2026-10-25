@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="css/additions.css">
     <link rel="stylesheet" href="css/v2.css">
+    <link rel="stylesheet" href="css/v3.css">
     <script src="js/vk-bridge.min.js"></script>
     <script>
         if (typeof vkBridge === 'undefined') {
@@ -31,6 +32,12 @@
     </div>
 
     <div class="game-container">
+        <button class="daily-chip" id="daily-chip" type="button" aria-label="Ежедневный бонус">
+            <span class="daily-chip-fire">🔥</span>
+            <span class="daily-chip-day" id="daily-chip-day">+5</span>
+            <span class="daily-chip-dot" id="daily-chip-dot"></span>
+        </button>
+
         <div class="user-info" id="user-info" role="button" tabindex="0" aria-label="Открыть профиль">
             <img class="user-avatar" id="user-avatar" alt="" hidden>
             <span class="user-name" id="user-name">Игрок</span>
@@ -225,6 +232,11 @@
         <div class="leaderboard-modal" id="leaderboard-modal">
             <div class="modal-content leaderboard-content">
                 <h2 class="modal-title">ТАБЛИЦА ЛИДЕРОВ</h2>
+                <div class="lb-tabs" id="lb-tabs">
+                    <button class="lb-tab active" type="button" data-period="all">ВСЁ ВРЕМЯ</button>
+                    <button class="lb-tab" type="button" data-period="week">НЕДЕЛЯ</button>
+                </div>
+                <div class="weekly-status" id="weekly-status"></div>
                 <div class="leaderboard-list" id="leaderboard-list">
                     <div class="leaderboard-loading">Загрузка...</div>
                 </div>
@@ -239,24 +251,25 @@
                     <span class="store-balance-label">Ваш баланс:</span>
                     <span class="store-balance-value" id="store-diamond-balance">💎 0</span>
                 </div>
+                <div class="store-cap-line" id="store-daily-cap"></div>
 
                 <div class="store-section-title">БУСТЕРЫ</div>
                 <div class="store-boosters">
-                    <div class="booster-store-card" data-store-booster="hammer" data-name="Молоток" data-desc="Разбить любую клетку" data-price="10">
+                    <div class="booster-store-card" data-store-booster="hammer" data-name="Молоток" data-desc="Разбить любую клетку" data-price="15">
                         <div class="boost-big-icon" data-icon="hammer"></div>
                         <div class="store-card-name">Молоток</div>
                         <div class="store-card-desc">Разбить любую клетку</div>
                         <div class="store-card-owned">У вас: <span class="owned-count" id="owned-hammer">0</span></div>
                         <button class="store-card-add">ДОПОЛНИТЬ</button>
                     </div>
-                    <div class="booster-store-card" data-store-booster="rocket" data-name="Ракета" data-desc="Снести ряд и колонку" data-price="20">
+                    <div class="booster-store-card" data-store-booster="rocket" data-name="Ракета" data-desc="Снести ряд и колонку" data-price="25">
                         <div class="boost-big-icon" data-icon="rocket"></div>
                         <div class="store-card-name">Ракета</div>
                         <div class="store-card-desc">Снести ряд и колонку</div>
                         <div class="store-card-owned">У вас: <span class="owned-count" id="owned-rocket">0</span></div>
                         <button class="store-card-add">ДОПОЛНИТЬ</button>
                     </div>
-                    <div class="booster-store-card" data-store-booster="swap" data-name="Обмен" data-desc="Поменять две клетки местами" data-price="15">
+                    <div class="booster-store-card" data-store-booster="swap" data-name="Обмен" data-desc="Поменять две клетки местами" data-price="20">
                         <div class="boost-big-icon" data-icon="swap"></div>
                         <div class="store-card-name">Обмен</div>
                         <div class="store-card-desc">Поменять две клетки местами</div>
@@ -316,6 +329,7 @@
     <script src="js/leaderboard.js"></script>
     <script src="js/optimizedRender.js"></script>
     <script src="js/share.js"></script>
+    <script src="js/progression.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
