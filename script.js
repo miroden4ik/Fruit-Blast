@@ -98,18 +98,44 @@ function getVKLaunchParamsStr() {
     }
 }
 
+const _vkLaunchParams = (() => {
+    try {
+        const raw = (window.location.search || '') + '&' + (window.location.hash || '').replace(/^#/, '');
+        return new URLSearchParams(raw);
+    } catch (e) {
+        return null;
+    }
+})();
+// Вне VK launch-параметров нет, и VKWebAppInit там не отвечает — игру нельзя вешать на него.
+const IS_VK_ENV = !!(_vkLaunchParams && (_vkLaunchParams.get('vk_app_id') || _vkLaunchParams.get('vk_user_id')));
+
 function initVkBridge() {
     return new Promise(resolve => {
-        if (typeof vkBridge !== 'undefined' && vkBridge.send) {
-            vkBridge.send('VKWebAppInit', {}).then(() => resolve(true)).catch(() => resolve(false));
-        } else {
+        if (!IS_VK_ENV || typeof vkBridge === 'undefined' || !vkBridge.send) {
             resolve(false);
+            return;
+        }
+        let settled = false;
+        const done = ok => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            resolve(ok);
+        };
+        const timer = setTimeout(() => {
+            console.warn('[vk] VKWebAppInit timeout — продолжаем без VK');
+            done(false);
+        }, 3000);
+        try {
+            vkBridge.send('VKWebAppInit', {}).then(() => done(true)).catch(() => done(false));
+        } catch (e) {
+            done(false);
         }
     });
 }
 
 function vkAvailable() {
-    return typeof vkBridge !== 'undefined' && !!vkBridge.send;
+    return IS_VK_ENV && typeof vkBridge !== 'undefined' && !!vkBridge.send;
 }
 
 // Storage helper: values in VK storage must be strings (max 4096 chars)

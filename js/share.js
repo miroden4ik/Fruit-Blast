@@ -1,8 +1,8 @@
 // ===== SCORE SHARING =====
 // Поделиться результатом игры: VK Bridge → Web Share API → Clipboard fallback.
 
-// URL приложения для шеринга (GitHub Pages / хостинг)
-const APP_SHARE_URL = 'https://miroden4ik.github.io/Fruit-Blast/';
+// Ссылка на VK Mini App (не GitHub Pages: вне VK страница не запускается)
+const APP_SHARE_URL = 'https://vk.com/app54785025';
 
 /**
  * Безопасный вызов глобальной showMessage с fallback,

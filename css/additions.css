@@ -611,3 +611,88 @@
 .store-modal .modal-content {
     animation: modal-fade-slide 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
+/* ========== КОРОТКИЕ ЭКРАНЫ (VK desktop iframe ~1106×700) ========== */
+@media (min-width: 768px) and (max-height: 820px) {
+    body {
+        padding: 6px 10px;
+    }
+
+    .game-container {
+        max-width: 440px !important;
+        max-height: 98vh;
+        padding: 8px 12px 10px !important;
+        overflow-y: auto;
+    }
+
+    .user-info {
+        margin-bottom: 6px;
+        padding: 4px 10px;
+        font-size: 13px;
+    }
+
+    .user-avatar {
+        width: 22px;
+        height: 22px;
+    }
+
+    .game-header {
+        margin-bottom: 8px;
+        gap: 8px;
+    }
+
+    .score-container {
+        padding: 8px 6px;
+        border-radius: 12px;
+    }
+
+    .score-label {
+        font-size: 9px;
+        letter-spacing: 0.5px;
+    }
+
+    .score-value {
+        font-size: 19px;
+        margin-top: 2px;
+    }
+
+    .game-board {
+        margin: 6px auto;
+        gap: 3px;
+        padding: 6px;
+    }
+
+    .cell {
+        width: auto !important;
+        height: auto !important;
+        min-width: 0 !important;
+        min-height: 0 !important;
+        font-size: 20px !important;
+        border-radius: 8px;
+    }
+
+    .controls {
+        margin-top: 8px;
+        gap: 8px;
+    }
+
+    .control-btn {
+        width: 38px !important;
+        height: 38px !important;
+    }
+
+    .control-btn svg {
+        width: 19px;
+        height: 19px;
+    }
+
+    .boost-panel {
+        margin-top: 8px;
+        gap: 8px !important;
+    }
+
+    .boost-btn {
+        width: 54px !important;
+        height: 54px !important;
+    }
+}
